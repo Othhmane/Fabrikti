@@ -27,13 +27,13 @@ export const APP_ROUTES = {
 };
 
 export const NAVIGATION_ITEMS = [
+  { name: 'Dashboard', path: APP_ROUTES.DASHBOARD, icon: <LayoutDashboard size={20} /> },
   { name: 'Commandes', path: APP_ROUTES.ORDERS, icon: <ShoppingCart size={20} /> },
   { name: 'Transactions', path: APP_ROUTES.TRANSACTIONS, icon: <ArrowLeftRight size={20} /> },
   { name: 'Clients', path: APP_ROUTES.CLIENTS, icon: <Users size={20} /> },
   { name: 'Produits', path: APP_ROUTES.PRODUCTS, icon: <Package size={20} /> },
   { name: 'Matières Premières', path: APP_ROUTES.RAW_MATERIALS, icon: <Layers size={20} /> },
   { name: 'Fournisseurs', path: APP_ROUTES.SUPPLIERS, icon: <Truck size={20} /> },
-  { name: 'Dashboard', path: APP_ROUTES.DASHBOARD, icon: <LayoutDashboard size={20} /> },
   { name: 'Emporte-pièces', path: APP_ROUTES.DIECUTTERS, icon: <Scissors size={20} /> },
   { name: 'Machines', path: APP_ROUTES.MACHINES, icon: <Settings size={20} /> },
   { name: 'Thème', path: APP_ROUTES.THEME, icon: <Palette size={20} /> },
