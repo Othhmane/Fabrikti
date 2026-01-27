@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -13,11 +12,11 @@ import {
 } from 'lucide-react';
 
 const STATUS_LABELS = {
-  [OrderStatus.EN_ATTENTE]: { label: 'En attente', color: 'gray' as any, icon: <Clock size={20}/> },
-  [OrderStatus.EN_PREPARATION]: { label: 'En préparation', color: 'yellow' as any, icon: <Package size={20}/> },
-  [OrderStatus.EN_STOCK]: { label: 'En stock', color: 'blue' as any, icon: <Database size={20}/> },
-  [OrderStatus.LIVREE]: { label: 'Livrée', color: 'green' as any, icon: <Truck size={20}/> },
-  [OrderStatus.ANNULEE]: { label: 'Annulée', color: 'red' as any, icon: <Ban size={20}/> },
+  [OrderStatus.EN_ATTENTE]: { label: 'En attente', color: 'gray' as any, icon: <Clock size={16}/> },
+  [OrderStatus.EN_PREPARATION]: { label: 'En préparation', color: 'yellow' as any, icon: <Package size={16}/> },
+  [OrderStatus.EN_STOCK]: { label: 'En stock', color: 'blue' as any, icon: <Database size={16}/> },
+  [OrderStatus.LIVREE]: { label: 'Livrée', color: 'green' as any, icon: <Truck size={16}/> },
+  [OrderStatus.ANNULEE]: { label: 'Annulée', color: 'red' as any, icon: <Ban size={16}/> },
 };
 
 const PAYMENT_LABELS = {
@@ -58,82 +57,166 @@ export const OrderDetails: React.FC = () => {
   const remaining = order.totalPrice - (order.paidAmount || 0);
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex items-center gap-4">
+    <div style={{ backgroundColor: '#F8F9FC', minHeight: '100vh', padding: '2rem' }}>
+      {/* TITRE SÉPARÉ */}
+      <div style={{ 
+        backgroundColor: 'white', 
+        padding: '1.5rem 2rem', 
+        borderRadius: '12px',
+        border: '1px solid #E5E7EB',
+        marginBottom: '1.5rem'
+      }}>
+        <div className="flex items-center gap-3 mb-2">
           <Link to="/orders">
-            <Button variant="ghost" className="p-2"><ArrowLeft size={20}/></Button>
+            <button className="p-2 hover:bg-gray-50 rounded-lg transition-colors">
+              <ArrowLeft size={20} className="text-gray-600"/>
+            </button>
           </Link>
-          <div>
-            <h2 className="text-2xl font-black text-slate-900 tracking-tighter uppercase">CMD-{order.id.slice(0,8)}</h2>
-            <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">Créée le {new Date(order.orderDate).toLocaleDateString()}</p>
-          </div>
+          <h1 style={{ 
+            fontSize: '1.5rem', 
+            fontWeight: '600', 
+            color: '#1F2937',
+            margin: 0
+          }}>
+            Commande CMD-{order.id.slice(0,8)}
+          </h1>
         </div>
-
+        <p style={{ 
+          fontSize: '0.875rem', 
+          color: '#9CA3AF',
+          margin: 0,
+          paddingLeft: '3.25rem'
+        }}>
+          Créée le {new Date(order.orderDate).toLocaleDateString()}
+        </p>
       </div>
 
-      <ResponsiveGrid className="lg:grid-cols-3">
+      <ResponsiveGrid className="lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           {/* STATUT ET ACTIONS */}
-          <Card className="p-8 border-none shadow-xl shadow-slate-200/50">
-            <div className="flex flex-wrap justify-between items-center gap-6">
+          <div style={{ 
+            backgroundColor: 'white', 
+            padding: '2rem', 
+            borderRadius: '12px',
+            border: '1px solid #E5E7EB'
+          }}>
+            <div className="flex flex-wrap justify-between items-center gap-6 mb-8">
               <div className="flex items-center gap-4">
-                <div className={`p-4 rounded-2xl bg-${STATUS_LABELS[order.status]?.color || 'gray'}-50 text-${STATUS_LABELS[order.status]?.color || 'gray'}-600`}>
+                <div style={{
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '12px',
+                  background: 'linear-gradient(135deg, #6366F1 0%, #3B82F6 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white'
+                }}>
                   {STATUS_LABELS[order.status]?.icon}
                 </div>
                 <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">État de l'ordre</p>
-                  <p className="text-xl font-black text-slate-900 uppercase tracking-tighter">{STATUS_LABELS[order.status]?.label}</p>
+                  <p style={{ fontSize: '0.75rem', color: '#9CA3AF', marginBottom: '0.25rem' }}>
+                    État de l'ordre
+                  </p>
+                  <p style={{ fontSize: '1.125rem', fontWeight: '600', color: '#1F2937' }}>
+                    {STATUS_LABELS[order.status]?.label}
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <select 
-                  className="h-12 border border-slate-200 rounded-xl px-4 text-sm font-bold bg-slate-50 outline-none focus:ring-4 focus:ring-blue-100"
+                  style={{
+                    height: '40px',
+                    border: '1px solid #E5E7EB',
+                    borderRadius: '8px',
+                    padding: '0 1rem',
+                    fontSize: '0.875rem',
+                    backgroundColor: 'white',
+                    outline: 'none',
+                    color: '#1F2937'
+                  }}
                   value={order.status}
                   onChange={(e) => updateStatusMutation.mutate(e.target.value as OrderStatus)}
                 >
                   {Object.values(OrderStatus).map(s => <option key={s} value={s}>{STATUS_LABELS[s].label}</option>)}
                 </select>
-                <div className="w-10 h-10 bg-green-500 text-white rounded-xl flex items-center justify-center shadow-lg shadow-green-200">
-                  <CheckCircle size={20} />
-                </div>
+                <button 
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    backgroundColor: '#10B981',
+                    color: 'white',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    border: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <CheckCircle size={18} />
+                </button>
               </div>
             </div>
 
             {/* LISTE DES PRODUITS */}
-            <div className="mt-10 border-t border-slate-100 pt-8">
-               <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight mb-4 flex items-center gap-2">
-                 <ShoppingCart size={16} className="text-blue-500"/> Articles en Production
+            <div style={{ borderTop: '1px solid #F3F4F6', paddingTop: '2rem' }}>
+               <h3 style={{ 
+                 fontSize: '0.875rem', 
+                 fontWeight: '600', 
+                 color: '#1F2937',
+                 marginBottom: '1rem',
+                 display: 'flex',
+                 alignItems: 'center',
+                 gap: '0.5rem'
+               }}>
+                 <ShoppingCart size={16} className="text-indigo-600"/> Articles commandés
                </h3>
-               <div className="bg-slate-50 rounded-2xl overflow-hidden border border-slate-100">
+               <div style={{ 
+                 backgroundColor: '#F9FAFB', 
+                 borderRadius: '8px',
+                 border: '1px solid #E5E7EB',
+                 overflow: 'hidden'
+               }}>
                   <table className="w-full text-left">
-                    <thead className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
+                    <thead style={{ 
+                      fontSize: '0.75rem', 
+                      color: '#6B7280',
+                      borderBottom: '1px solid #E5E7EB'
+                    }}>
                       <tr>
-                        <th className="px-6 py-4">Désignation</th>
-                        <th className="px-6 py-4">Quantité</th>
-                        <th className="px-6 py-4">PU HT</th>
-                        <th className="px-6 py-4 text-right">Total HT</th>
+                        <th style={{ padding: '0.75rem 1rem', fontWeight: '500' }}>Désignation</th>
+                        <th style={{ padding: '0.75rem 1rem', fontWeight: '500' }}>Quantité</th>
+                        <th style={{ padding: '0.75rem 1rem', fontWeight: '500' }}>PU HT</th>
+                        <th style={{ padding: '0.75rem 1rem', fontWeight: '500', textAlign: 'right' }}>Total HT</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100">
+                    <tbody>
                       {order.items?.map((item, idx) => {
                         const p = products?.find(prod => prod.id === item.productId);
                         return (
-                          <tr key={idx} className="text-sm font-bold text-slate-700">
-                            <td className="px-6 py-4">{p?.name || 'Produit Inconnu'}</td>
-                            <td className="px-6 py-4">{item.quantity} {item.unit}</td>
-                            <td className="px-6 py-4">{item.unitPrice?.toLocaleString()} €</td>
-                            <td className="px-6 py-4 text-right font-black">{item.totalItemPrice?.toLocaleString()} €</td>
+                          <tr key={idx} style={{ 
+                            fontSize: '0.875rem', 
+                            color: '#374151',
+                            borderTop: idx > 0 ? '1px solid #E5E7EB' : 'none'
+                          }}>
+                            <td style={{ padding: '0.75rem 1rem' }}>{p?.name || 'Produit Inconnu'}</td>
+                            <td style={{ padding: '0.75rem 1rem' }}>{item.quantity} {item.unit}</td>
+                            <td style={{ padding: '0.75rem 1rem' }}>{item.unitPrice?.toLocaleString()} €</td>
+                            <td style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: '600' }}>
+                              {item.totalItemPrice?.toLocaleString()} €
+                            </td>
                           </tr>
                         );
                       })}
                       {(!order.items || order.items.length === 0) && (
-                         <tr className="text-sm font-bold text-slate-700">
-                            <td className="px-6 py-4">Produit Unique (Legacy)</td>
-                            {/* Fix: Order no longer has a top-level quantity property. Fallback to 0. */}
-                            <td className="px-6 py-4">0</td>
-                            <td className="px-6 py-4">--</td>
-                            <td className="px-6 py-4 text-right font-black">{order.totalPrice.toLocaleString()} €</td>
+                         <tr style={{ fontSize: '0.875rem', color: '#374151' }}>
+                            <td style={{ padding: '0.75rem 1rem' }}>Produit Unique (Legacy)</td>
+                            <td style={{ padding: '0.75rem 1rem' }}>0</td>
+                            <td style={{ padding: '0.75rem 1rem' }}>--</td>
+                            <td style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: '600' }}>
+                              {order.totalPrice.toLocaleString()} €
+                            </td>
                          </tr>
                       )}
                     </tbody>
@@ -142,97 +225,254 @@ export const OrderDetails: React.FC = () => {
             </div>
 
             {/* RÉCAPITULATIF FINANCIER */}
-            <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-6 p-6 bg-slate-900 rounded-3xl text-white">
+            <div style={{ 
+              marginTop: '2rem',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+              gap: '1rem',
+              padding: '1.5rem',
+              backgroundColor: 'rgb(219, 234, 254)',
+              color: 'rgb(30, 64, 175)',
+            }}>
                <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Montant de la commande</p>
-                  <p className="text-2xl font-black">{order.totalPrice.toLocaleString()} €</p>
+                  <p style={{ fontSize: '0.75rem', color: 'rgb(30, 64, 175)', marginBottom: '0.25rem' }}>
+                    Montant total
+                  </p>
+                  <p style={{ fontSize: '1.5rem', fontWeight: '600' }}>
+                    {order.totalPrice.toLocaleString()} €
+                  </p>
                </div>
                <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Déjà encaissé</p>
-                  <p className="text-2xl font-black text-emerald-400">{order.paidAmount?.toLocaleString() || 0} €</p>
+                  <p style={{ fontSize: '0.75rem', color: 'rgb(30, 64, 175)', marginBottom: '0.25rem' }}>
+                    Déjà encaissé
+                  </p>
+                  <p style={{ fontSize: '1.5rem', fontWeight: '600', color: '#10B981' }}>
+                    {order.paidAmount?.toLocaleString() || 0} €
+                  </p>
                </div>
                <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Reste à percevoir</p>
-                  <p className={`text-2xl font-black ${remaining > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>{remaining.toLocaleString()} €</p>
+                  <p style={{ fontSize: '0.75rem', color: 'rgb(30, 64, 175)', marginBottom: '0.25rem' }}>
+                    Reste à percevoir
+                  </p>
+                  <p style={{ 
+                    fontSize: '1.5rem', 
+                    fontWeight: '600',
+                    color: 'rgb(30, 64, 175)',
+                  }}>
+                    {remaining.toLocaleString()} €
+                  </p>
                </div>
             </div>
-          </Card>
+          </div>
 
           {/* FLUX FINANCIER LIÉ */}
-          <Card className="p-8 border-none shadow-xl shadow-slate-200/50">
-            <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight mb-6 flex items-center gap-2">
-              <DollarSign size={16} className="text-emerald-500" /> Historique des Paiements
+          <div style={{ 
+            backgroundColor: 'white', 
+            padding: '2rem', 
+            borderRadius: '12px',
+            border: '1px solid #E5E7EB'
+          }}>
+            <h3 style={{ 
+              fontSize: '0.875rem', 
+              fontWeight: '600', 
+              color: '#1F2937',
+              marginBottom: '1.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}>
+              <DollarSign size={16} className="text-emerald-600" /> Historique des Paiements
             </h3>
             <div className="space-y-3">
               {orderTransactions.length === 0 ? (
-                <div className="p-10 text-center border-2 border-dashed border-slate-100 rounded-2xl text-slate-400 italic font-medium">
+                <div style={{ 
+                  padding: '2rem', 
+                  textAlign: 'center',
+                  border: '2px dashed #E5E7EB',
+                  borderRadius: '8px',
+                  color: '#9CA3AF',
+                  fontSize: '0.875rem'
+                }}>
                   Aucun mouvement de trésorerie lié à cette commande.
                 </div>
               ) : orderTransactions.map(t => (
-                <div key={t.id} className="flex justify-between items-center p-4 bg-white border border-slate-100 rounded-2xl hover:border-blue-200 transition-all shadow-sm">
-                  <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-xl ${t.type === TransactionType.INCOME ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'} flex items-center justify-center`}>
+                <div key={t.id} style={{ 
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '1rem',
+                  backgroundColor: 'white',
+                  border: '1px solid #E5E7EB',
+                  borderRadius: '8px'
+                }} className="hover:border-indigo-200 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '8px',
+                      backgroundColor: t.type === TransactionType.INCOME ? '#D1FAE5' : '#FEE2E2',
+                      color: t.type === TransactionType.INCOME ? '#10B981' : '#EF4444',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
                       <CreditCard size={18}/>
                     </div>
                     <div>
-                      <p className="font-black text-slate-900 text-sm">{t.description}</p>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{new Date(t.date).toLocaleDateString()}</p>
+                      <p style={{ fontWeight: '600', color: '#1F2937', fontSize: '0.875rem' }}>
+                        {t.description}
+                      </p>
+                      <p style={{ fontSize: '0.75rem', color: '#9CA3AF' }}>
+                        {new Date(t.date).toLocaleDateString()}
+                      </p>
                     </div>
                   </div>
-                  <p className={`font-black ${t.type === TransactionType.INCOME ? 'text-emerald-600' : 'text-red-600'}`}>
+                  <p style={{ 
+                    fontWeight: '600',
+                    color: t.type === TransactionType.INCOME ? '#10B981' : '#EF4444'
+                  }}>
                     {t.type === TransactionType.INCOME ? '+' : '-'}{t.amount.toLocaleString()} €
                   </p>
                 </div>
               ))}
             </div>
-          </Card>
+          </div>
         </div>
 
         {/* INFOS CLIENT & PRODUCTION */}
         <div className="space-y-6">
-          <Card className="p-8 border-none bg-blue-600 text-white shadow-xl shadow-blue-500/20">
-            <h3 className="text-[10px] font-black text-blue-200 uppercase tracking-widest mb-6 flex items-center gap-2">
-              <User size={14}/> Client Partenaire
+          <div style={{ 
+            backgroundColor: 'white', 
+            padding: '2rem', 
+            borderRadius: '12px',
+            border: '1px solid #E5E7EB'
+          }}>
+            <h3 style={{ 
+              fontSize: '0.75rem', 
+              color: '#9CA3AF',
+              marginBottom: '1.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}>
+              <User size={14}/> Informations Client
             </h3>
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center font-black text-2xl text-white border border-white/20">
+            <div className="flex items-center gap-3 mb-6">
+              <div style={{
+                width: '56px',
+                height: '56px',
+                borderRadius: '12px',
+                background: 'linear-gradient(135deg, #6366F1 0%, #3B82F6 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '1.5rem',
+                fontWeight: '600',
+                color: 'white'
+              }}>
                 {client?.name.charAt(0)}
               </div>
-              <div className="min-w-0">
-                <p className="font-black text-xl truncate leading-tight uppercase tracking-tighter">{client?.name}</p>
-                <p className="text-xs text-blue-200 font-bold truncate opacity-80">{client?.email}</p>
+              <div className="min-w-0 flex-1">
+                <p style={{ fontWeight: '600', fontSize: '1.125rem', color: '#1F2937' }} className="truncate">
+                  {client?.name}
+                </p>
+                <p style={{ fontSize: '0.875rem', color: '#9CA3AF' }} className="truncate">
+                  {client?.email}
+                </p>
               </div>
             </div>
-            <div className="space-y-3 pt-6 border-t border-white/10">
-              <div className="flex items-center gap-3 text-sm font-bold">
-                 <Phone size={14} className="opacity-60" /> {client?.phone}
+            
+            {/* Sections colorées pour téléphone et adresse */}
+            <div className="space-y-3">
+              <div style={{
+                backgroundColor: '#DBEAFE',
+                padding: '0.75rem',
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem'
+              }}>
+                <Phone size={16} style={{ color: '#3B82F6' }} />
+                <span style={{ fontSize: '0.875rem', color: '#1E40AF', fontWeight: '500' }}>
+                  {client?.phone}
+                </span>
               </div>
-              <div className="flex items-start gap-3 text-sm font-bold">
-                 <MapPin size={14} className="opacity-60 mt-1" /> {client?.address}
+              
+              <div style={{
+                backgroundColor: '#FEF3C7',
+                padding: '0.75rem',
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'start',
+                gap: '0.75rem'
+              }}>
+                <MapPin size={16} style={{ color: '#F59E0B', marginTop: '2px' }} />
+                <span style={{ fontSize: '0.875rem', color: '#92400E', fontWeight: '500' }}>
+                  {client?.address}
+                </span>
               </div>
             </div>
-            <Link to={`/clients/${client?.id}/history`} className="block mt-8">
-              <Button variant="ghost" className="w-full h-12 bg-white/10 hover:bg-white/20 text-white text-xs font-black uppercase rounded-xl">Consulter Historique</Button>
+            
+            <Link to={`/clients/${client?.id}/history`} className="block mt-6">
+              <button style={{
+                width: '100%',
+                height: '40px',
+                backgroundColor: 'white',
+                border: '1px solid #E5E7EB',
+                borderRadius: '8px',
+                fontSize: '0.875rem',
+                fontWeight: '500',
+                color: '#6366F1',
+                cursor: 'pointer'
+              }} className="hover:bg-gray-50 transition-colors">
+                Consulter Historique
+              </button>
             </Link>
-          </Card>
+          </div>
 
-          <Card className="p-8 border-none shadow-xl shadow-slate-200/50">
-            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+          <div style={{ 
+            backgroundColor: 'white', 
+            padding: '2rem', 
+            borderRadius: '12px',
+            border: '1px solid #E5E7EB'
+          }}>
+            <h3 style={{ 
+              fontSize: '0.75rem', 
+              color: '#9CA3AF',
+              marginBottom: '1.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}>
               <Info size={14}/> Détails Production
             </h3>
             <div className="space-y-4">
-               <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Notes Internes</p>
-                  <p className="text-sm font-bold text-slate-700 italic">
+               <div style={{ 
+                 padding: '1rem',
+                 backgroundColor: '#F9FAFB',
+                 borderRadius: '8px',
+                 border: '1px solid #E5E7EB'
+               }}>
+                  <p style={{ fontSize: '0.75rem', color: '#9CA3AF', marginBottom: '0.5rem' }}>
+                    Notes Internes
+                  </p>
+                  <p style={{ fontSize: '0.875rem', color: '#374151', fontStyle: 'italic' }}>
                     {order.notes || 'Aucune instruction particulière pour l\'atelier.'}
                   </p>
                </div>
-               <div className="flex items-center gap-3 text-sm font-bold text-slate-500 px-2">
-                  <Calendar size={16} className="text-slate-300"/>
+               <div style={{
+                 display: 'flex',
+                 alignItems: 'center',
+                 gap: '0.75rem',
+                 fontSize: '0.875rem',
+                 color: '#6B7280',
+                 padding: '0.5rem'
+               }}>
+                  <Calendar size={16} style={{ color: '#9CA3AF' }}/>
                   Livraison estimée : {order.deliveryDate || 'Non définie'}
                </div>
             </div>
-          </Card>
+          </div>
         </div>
       </ResponsiveGrid>
     </div>

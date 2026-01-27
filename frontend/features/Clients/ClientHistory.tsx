@@ -1,11 +1,9 @@
-
 import React, { useMemo, useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { FabriktiService } from '../../api/services';
 import { Card, Badge, Button, Input } from '../../components/UI';
 import { TransactionType, PaymentStatus, Order, Transaction } from '../../types';
-// Import the 'Plus' icon and Trash2 for notes management
 import { 
   ShoppingBag, ArrowLeft, ArrowRightLeft, Clock, Calendar, 
   DollarSign, Package, CreditCard, TrendingUp, AlertCircle, 
@@ -24,11 +22,9 @@ export const ClientHistory: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [filterType, setFilterType] = useState<'all' | 'orders' | 'transactions'>('all');
   
-  // État local pour la gestion des notes (Persistance simulée par localStorage)
   const [notes, setNotes] = useState<ClientNote[]>([]);
   const [newNoteText, setNewNoteText] = useState('');
 
-  // Chargement des notes au montage
   useEffect(() => {
     const savedNotes = localStorage.getItem(`fabrikti_client_notes_${id}`);
     if (savedNotes) {
@@ -59,7 +55,6 @@ export const ClientHistory: React.FC = () => {
     }
   };
 
-  // Récupération des données
   const { data: clients } = useQuery({ queryKey: ['clients'], queryFn: FabriktiService.getClients });
   const { data: orders } = useQuery({ queryKey: ['orders'], queryFn: FabriktiService.getOrders });
   const { data: transactions } = useQuery({ queryKey: ['transactions'], queryFn: FabriktiService.getTransactions });
@@ -67,7 +62,6 @@ export const ClientHistory: React.FC = () => {
 
   const client = clients?.find(c => c.id === id);
   
-  // Logique métier : Agrégation des données client
   const clientOrders = useMemo(() => orders?.filter(o => o.clientId === id) || [], [orders, id]);
   
   const clientTransactions = useMemo(() => {
@@ -75,7 +69,6 @@ export const ClientHistory: React.FC = () => {
     return transactions.filter(t => t.clientId === id || (t.orderId && clientOrders.some(o => o.id === t.orderId)));
   }, [transactions, id, clientOrders]);
 
-  // Calculs Financiers Avancés
   const stats = useMemo(() => {
     const totalInvoiced = clientOrders.reduce((sum, o) => sum + o.totalPrice, 0);
     const totalIncomes = clientTransactions.filter(t => t.type === TransactionType.INCOME).reduce((sum, t) => sum + t.amount, 0);
@@ -96,7 +89,6 @@ export const ClientHistory: React.FC = () => {
     };
   }, [clientOrders, clientTransactions]);
 
-  // Timeline unifiée (Fusion Commandes + Transactions triées par date)
   const timeline = useMemo(() => {
     const combined: any[] = [
       ...clientOrders.map(o => ({ ...o, _type: 'ORDER' })),
@@ -110,304 +102,298 @@ export const ClientHistory: React.FC = () => {
   }, [clientOrders, clientTransactions]);
 
   if (!client) return (
-    <div className="p-20 text-center animate-in fade-in duration-500">
-      <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-        <AlertCircle size={40} className="text-slate-300" />
+    <div className="p-20 text-center">
+      <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+        <AlertCircle size={40} className="text-gray-300" />
       </div>
-      <p className="text-slate-500 font-black uppercase tracking-tighter text-xl">Client Introuvable</p>
+      <p className="text-gray-500 text-sm">Client Introuvable</p>
       <Link to="/clients" className="mt-4 inline-block"><Button variant="secondary">Retour à la liste</Button></Link>
     </div>
   );
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="space-y-6">
       
-      {/* HEADER PROFESSIONNEL (Boutons masqués visuellement selon demande) */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
-        <div className="flex items-center gap-5">
-          <Link to="/clients">
-            <button className="w-12 h-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm">
-              <ArrowLeft size={20} />
-            </button>
-          </Link>
-          <div>
-            <div className="flex items-center gap-3 mb-1">
-              <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase leading-none">
+      {/* Titre principal */}
+      <div className="bg-white border border-gray-100 rounded-lg p-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Link to="/clients">
+              <button className="w-10 h-10 rounded-lg bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-400 hover:text-indigo-600 hover:border-indigo-200 transition-all">
+                <ArrowLeft size={18} />
+              </button>
+            </Link>
+            <div>
+              <h2 className="text-2xl font-semibold text-gray-900">
                 {client.name}
               </h2>
-              <Badge color={stats.balance < 0 ? 'red' : 'green'}>
-                {stats.balance < 0 ? 'En dette' : 'Solde à jour'}
-              </Badge>
+              <p className="text-sm text-gray-500 mt-0.5">Historique du client</p>
             </div>
-            <div className="flex items-center gap-4 text-xs font-bold text-slate-400 uppercase tracking-widest">
-              <span className="flex items-center gap-1.5"><User size={12}/> ID: {client.id}</span>
-              <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-              <span className="flex items-center gap-1.5"><Calendar size={12}/> Partenaire depuis 2024</span>
+          </div>
+          <Badge color={stats.balance < 0 ? 'red' : 'green'}>
+            {stats.balance < 0 ? 'En dette' : 'Solde à jour'}
+          </Badge>
+        </div>
+      </div>
+
+      {/* Stats financières */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        {/* Total Facturé */}
+        <div className="bg-white border border-gray-100 rounded-lg p-5">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center">
+              <ShoppingBag size={18} className="text-white"/>
             </div>
+            <div>
+              <p className="text-xs text-gray-500">Commandes</p>
+              <p className="text-sm font-semibold text-gray-900">{clientOrders.length} bons</p>
+            </div>
+          </div>
+          <p className="text-xs text-gray-500 mb-1">Total Facturé HT</p>
+          <p className="text-2xl font-semibold text-gray-900">{stats.totalInvoiced.toLocaleString()} €</p>
+        </div>
+
+        {/* Encaissements */}
+        <div className="bg-white border border-gray-100 rounded-lg p-5">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center">
+              <ArrowUpCircle size={18} className="text-white"/>
+            </div>
+            <div>
+              <p className="text-xs text-emerald-600">Réglé</p>
+              <p className="text-sm font-semibold text-emerald-600">+{stats.totalIncomes.toLocaleString()} €</p>
+            </div>
+          </div>
+          <p className="text-xs text-gray-500 mb-1">Total Payé Net</p>
+          <p className="text-2xl font-semibold text-emerald-600">{stats.netPaid.toLocaleString()} €</p>
+        </div>
+
+        {/* Solde Client */}
+        <div className={`rounded-lg p-5 ${stats.balance < 0 ? 'bg-gradient-to-br from-rose-400 to-rose-400' : 'bg-gradient-to-br from-indigo-500 to-indigo-600'}`}>
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center">
+              {stats.balance < 0 ? <AlertCircle size={18} className="text-white"/> : <CheckCircle2 size={18} className="text-white"/>}
+            </div>
+            <div>
+              <p className="text-xs text-white/80">
+                {stats.balance < 0 ? 'Dette en cours' : 'Avance client'}
+              </p>
+            </div>
+          </div>
+          <p className="text-xs text-white/80 mb-1">Solde du Compte</p>
+          <p className="text-2xl font-semibold text-white">
+            {stats.balance > 0 ? '+' : ''}{stats.balance.toLocaleString()} €
+          </p>
+        </div>
+
+        {/* Panier Moyen */}
+        <div className="bg-white border border-gray-100 rounded-lg p-5">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+              <TrendingUp size={18} className="text-white"/>
+            </div>
+            <div>
+              <span className="inline-block px-2 py-0.5 bg-blue-50 text-blue-600 text-xs rounded">Client Régulier</span>
+            </div>
+          </div>
+          <p className="text-xs text-gray-500 mb-1">Panier Moyen</p>
+          <p className="text-2xl font-semibold text-gray-900">{Math.round(stats.averageOrder).toLocaleString()} €</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* Timeline */}
+        <div className="lg:col-span-2 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <History size={18} className="text-indigo-600" /> Journal d'Activité
+            </h3>
+            <div className="flex gap-2">
+              {['all', 'orders', 'transactions'].map(t => (
+                <button 
+                  key={t}
+                  onClick={() => setFilterType(t as any)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                    filterType === t ? 'bg-indigo-600 text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  {t === 'all' ? 'Tout' : t === 'orders' ? 'Bons' : 'Flux'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            {timeline
+              .filter(item => {
+                if (filterType === 'orders') return item._type === 'ORDER';
+                if (filterType === 'transactions') return item._type === 'TRANSACTION';
+                return true;
+              })
+              .map((item, idx) => {
+              const isOrder = item._type === 'ORDER';
+              
+              return (
+                <div key={idx} className="bg-white border border-gray-100 rounded-lg p-4 hover:border-indigo-200 transition-all">
+                  <div className="flex items-start gap-4">
+                    {/* Icône */}
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
+                      isOrder 
+                      ? 'bg-blue-50 text-blue-600' 
+                      : (item.type === TransactionType.INCOME ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600')
+                    }`}>
+                      {isOrder ? <Package size={18}/> : <ArrowRightLeft size={18}/>}
+                    </div>
+
+                    {/* Contenu */}
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs text-gray-500">
+                          {new Date(item.orderDate || item.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                        </span>
+                        <span className={`px-2 py-0.5 rounded text-xs ${
+                          isOrder 
+                          ? 'bg-blue-50 text-blue-600' 
+                          : (item.type === TransactionType.INCOME ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600')
+                        }`}>
+                          {isOrder ? 'Bon de Commande' : (item.type === TransactionType.INCOME ? 'Encaissement' : 'Décaissement')}
+                        </span>
+                      </div>
+                      <h4 className="text-sm font-semibold text-gray-900 mb-1">
+                        {isOrder ? `Commande CMD-${item.id.slice(0,5)}` : item.description}
+                      </h4>
+                      {isOrder && (
+                        <p className="text-xs text-gray-500">
+                          {item.items?.length || 0} articles • Statut : {item.status}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Montant */}
+                    <div className="text-right">
+                      <p className={`text-lg font-semibold ${isOrder ? 'text-gray-900' : (item.type === TransactionType.INCOME ? 'text-emerald-600' : 'text-rose-600')}`}>
+                        {isOrder ? '' : (item.type === TransactionType.INCOME ? '+' : '-')}{item.amount || item.totalPrice} €
+                      </p>
+                      {isOrder && (
+                        <Link to={`/orders/${item.id}`}>
+                          <button className="flex items-center gap-1 text-xs text-indigo-600 hover:underline mt-1">
+                            Détails <ChevronRight size={12}/>
+                          </button>
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            
+            {timeline.length === 0 && (
+              <div className="py-16 text-center bg-white rounded-lg border border-dashed border-gray-200">
+                <p className="text-gray-400 text-sm">Aucun historique disponible</p>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Boutons d'action masqués visuellement conformément à la demande de nettoyage UI */}
-        <div className="hidden gap-3">
-           <Button variant="secondary" className="h-12 px-6 rounded-xl font-black uppercase text-xs">
-             <MessageSquare size={16} /> Note interne
-           </Button>
-           <Button className="h-12 px-6 rounded-xl font-black uppercase text-xs shadow-xl shadow-blue-500/20">
-             <Plus size={16} /> Nouvelle Commande
-           </Button>
-        </div>
-      </div>
+        {/* Sidebar */}
+        <div className="space-y-4">
+          
+          {/* Notes */}
+          <div className="bg-white border border-gray-100 rounded-lg p-5">
+            <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <MessageSquare size={16} className="text-indigo-600" /> Notes de gestion
+            </h3>
+            
+            {/* Saisie */}
+            <div className="relative mb-4">
+              <textarea 
+                className="w-full h-24 p-3 bg-gray-50 rounded-lg border border-gray-200 text-sm text-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-300 outline-none resize-none transition-all"
+                placeholder="Ajouter une note..."
+                value={newNoteText}
+                onChange={(e) => setNewNoteText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleAddNote();
+                  }
+                }}
+              ></textarea>
+              <button 
+                onClick={handleAddNote}
+                className="absolute bottom-2 right-2 p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+              >
+                <Send size={14} />
+              </button>
+            </div>
 
-      {/* DASHBOARD FINANCIER DU PORTEFEUILLE */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Total Facturé */}
-        <Card className="p-6 border-none shadow-xl shadow-slate-200/40 bg-white">
-           <div className="flex justify-between items-start mb-4">
-              <div className="p-3 bg-slate-50 text-slate-600 rounded-2xl border border-slate-100"><ShoppingBag size={20}/></div>
-              <div className="text-right">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Commandes</p>
-                <p className="text-sm font-black text-slate-900">{clientOrders.length} bons</p>
-              </div>
-           </div>
-           <p className="text-sm font-bold text-slate-500 uppercase tracking-tight mb-1">Total Facturé HT</p>
-           <p className="text-3xl font-black text-slate-900 tracking-tighter">{stats.totalInvoiced.toLocaleString()} €</p>
-        </Card>
-
-        {/* Encaissements Net */}
-        <Card className="p-6 border-none shadow-xl shadow-emerald-500/5 bg-gradient-to-br from-white to-emerald-50/20">
-           <div className="flex justify-between items-start mb-4">
-              <div className="p-3 bg-emerald-100 text-emerald-600 rounded-2xl"><ArrowUpCircle size={20}/></div>
-              <div className="text-right">
-                <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Réglé</p>
-                <p className="text-sm font-black text-emerald-600">+{stats.totalIncomes.toLocaleString()} €</p>
-              </div>
-           </div>
-           <p className="text-sm font-bold text-slate-500 uppercase tracking-tight mb-1">Total Payé Net</p>
-           <p className="text-3xl font-black text-emerald-700 tracking-tighter">{stats.netPaid.toLocaleString()} €</p>
-        </Card>
-
-        {/* Solde Client (Le plus important) */}
-        <Card className={`p-6 border-none shadow-xl ${stats.balance < 0 ? 'bg-slate-900 text-white shadow-rose-500/10' : 'bg-blue-600 text-white shadow-blue-500/20'}`}>
-           <div className="flex justify-between items-start mb-4">
-              <div className={`p-3 rounded-2xl ${stats.balance < 0 ? 'bg-rose-500/20 text-rose-400' : 'bg-white/20 text-white'}`}>
-                {stats.balance < 0 ? <AlertCircle size={20}/> : <CheckCircle2 size={20}/>}
-              </div>
-              <div className="text-right">
-                <p className={`text-[10px] font-black uppercase tracking-widest ${stats.balance < 0 ? 'text-rose-400' : 'text-blue-200'}`}>
-                  {stats.balance < 0 ? 'Dette en cours' : 'Avance client'}
-                </p>
-              </div>
-           </div>
-           <p className={`text-sm font-bold uppercase tracking-tight mb-1 ${stats.balance < 0 ? 'text-slate-400' : 'text-blue-100'}`}>Solde du Compte</p>
-           <p className={`text-3xl font-black tracking-tighter ${stats.balance < 0 ? 'text-rose-400' : 'text-white'}`}>
-            {stats.balance > 0 ? '+' : ''}{stats.balance.toLocaleString()} €
-           </p>
-        </Card>
-
-        {/* Indicateurs de Performance */}
-        <Card className="p-6 border-none shadow-xl shadow-slate-200/40 bg-white">
-           <div className="flex justify-between items-start mb-4">
-              <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl border border-blue-100"><TrendingUp size={20}/></div>
-              <div className="text-right">
-                <Badge color="blue">Client Régulier</Badge>
-              </div>
-           </div>
-           <p className="text-sm font-bold text-slate-500 uppercase tracking-tight mb-1">Panier Moyen</p>
-           <p className="text-3xl font-black text-slate-900 tracking-tighter">{Math.round(stats.averageOrder).toLocaleString()} €</p>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
-        {/* TIMELINE D'ACTIVITÉ UNIFIÉE */}
-        <div className="lg:col-span-2 space-y-6">
-           <div className="flex items-center justify-between">
-              <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter flex items-center gap-2">
-                <History size={20} className="text-blue-600" /> Journal d'Activité
-              </h3>
-              <div className="flex gap-2">
-                 {['all', 'orders', 'transactions'].map(t => (
-                   <button 
-                    key={t}
-                    onClick={() => setFilterType(t as any)}
-                    className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
-                      filterType === t ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
-                    }`}
-                   >
-                     {t === 'all' ? 'Tout' : t === 'orders' ? 'Bons' : 'Flux'}
-                   </button>
-                 ))}
-              </div>
-           </div>
-
-           <div className="space-y-4">
-              {timeline
-                .filter(item => {
-                  if (filterType === 'orders') return item._type === 'ORDER';
-                  if (filterType === 'transactions') return item._type === 'TRANSACTION';
-                  return true;
-                })
-                .map((item, idx) => {
-                const isOrder = item._type === 'ORDER';
-                
-                return (
-                  <div key={idx} className="relative group">
-                    {/* Ligne de connexion verticale */}
-                    {idx !== timeline.length - 1 && <div className="absolute left-6 top-10 bottom-0 w-px bg-slate-100 group-hover:bg-blue-100 transition-colors"></div>}
-                    
-                    <div className="flex gap-4">
-                      {/* Icône de Statut */}
-                      <div className={`z-10 w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-sm border transition-all ${
-                        isOrder 
-                        ? 'bg-blue-50 border-blue-100 text-blue-600' 
-                        : (item.type === TransactionType.INCOME ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'bg-rose-50 border-rose-100 text-rose-600')
-                      }`}>
-                        {isOrder ? <Package size={20}/> : <ArrowRightLeft size={20}/>}
-                      </div>
-
-                      {/* Contenu de la carte d'activité */}
-                      <Card className="flex-1 p-5 border-slate-200 hover:border-blue-300 transition-all hover:shadow-lg hover:shadow-slate-100">
-                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                            <div>
-                               <div className="flex items-center gap-2 mb-1">
-                                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                    {new Date(item.orderDate || item.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
-                                  </span>
-                                  <span className="w-1 h-1 rounded-full bg-slate-200"></span>
-                                  <Badge color={isOrder ? 'blue' : (item.type === TransactionType.INCOME ? 'green' : 'red')}>
-                                    {isOrder ? 'Bon de Commande' : (item.type === TransactionType.INCOME ? 'Encaissement' : 'Décaissement')}
-                                  </Badge>
-                               </div>
-                               <h4 className="text-base font-black text-slate-900 uppercase tracking-tight">
-                                 {isOrder ? `Commande CMD-${item.id.slice(0,5)}` : item.description}
-                               </h4>
-                               {isOrder && (
-                                 <p className="text-xs text-slate-500 font-medium italic mt-1">
-                                   {item.items?.length || 0} articles en production • Statut : {item.status}
-                                 </p>
-                               )}
-                            </div>
-                            <div className="text-right self-stretch sm:self-auto flex sm:flex-col justify-between items-end gap-2">
-                               <p className={`text-xl font-black tracking-tighter ${isOrder ? 'text-slate-900' : (item.type === TransactionType.INCOME ? 'text-emerald-600' : 'text-rose-600')}`}>
-                                 {isOrder ? '' : (item.type === TransactionType.INCOME ? '+' : '-')}{item.amount || item.totalPrice} €
-                               </p>
-                               {isOrder ? (
-                                 <Link to={`/orders/${item.id}`}>
-                                   <button className="flex items-center gap-1 text-[10px] font-black text-blue-600 uppercase tracking-widest hover:underline">
-                                      Détails <ChevronRight size={12}/>
-                                   </button>
-                                 </Link>
-                               ) : (
-                                 <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Transaction ID: {item.id.slice(0,5)}</span>
-                               )}
-                            </div>
-                         </div>
-                      </Card>
+            {/* Liste des notes */}
+            <div className="space-y-2 max-h-[300px] overflow-y-auto">
+              {notes.length === 0 ? (
+                <p className="text-center py-4 text-xs text-gray-400">Aucune note enregistrée</p>
+              ) : (
+                notes.map(note => (
+                  <div key={note.id} className="p-3 bg-gray-50 border border-gray-100 rounded-lg group hover:border-indigo-100 transition-all">
+                    <div className="flex justify-between items-start mb-1">
+                      <span className="text-xs text-gray-500">
+                        {new Date(note.date).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                      <button 
+                        onClick={() => handleDeleteNote(note.id)}
+                        className="p-1 text-gray-300 hover:text-rose-500 transition-all"
+                      >
+                        <Trash2 size={12} />
+                      </button>
                     </div>
+                    <p className="text-xs text-gray-700 leading-relaxed whitespace-pre-wrap">{note.text}</p>
                   </div>
-                );
-              })}
-              
-              {timeline.length === 0 && (
-                <div className="py-20 text-center bg-white rounded-[32px] border-2 border-dashed border-slate-100">
-                   <p className="text-slate-400 font-bold uppercase tracking-widest italic">Aucun historique disponible</p>
-                </div>
+                ))
               )}
-           </div>
-        </div>
+            </div>
+          </div>
 
-        {/* BARRE LATÉRALE D'INFORMATIONS COMPLÉMENTAIRES */}
-        <div className="space-y-6">
-           {/* Section Notes de Gestion - Version améliorée avec historique */}
-           <Card className="p-6 border-none shadow-xl shadow-slate-200/40 bg-white">
-              <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-4 flex items-center gap-2">
-                <MessageSquare size={16} className="text-blue-600" /> Notes de gestion
-              </h3>
-              
-              {/* Saisie de nouvelle note */}
-              <div className="relative mb-6">
-                <textarea 
-                  className="w-full h-24 p-4 bg-slate-50 rounded-2xl border-none text-sm font-medium text-slate-600 placeholder:text-slate-300 focus:ring-2 focus:ring-blue-100 outline-none resize-none transition-all"
-                  placeholder="Appel client, rappel facture, instruction..."
-                  value={newNoteText}
-                  onChange={(e) => setNewNoteText(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      handleAddNote();
-                    }
-                  }}
-                ></textarea>
-                <button 
-                  onClick={handleAddNote}
-                  className="absolute bottom-3 right-3 p-2 bg-blue-600 text-white rounded-xl shadow-lg shadow-blue-500/30 hover:bg-blue-700 transition-colors"
-                >
-                  <Send size={16} />
-                </button>
-              </div>
-
-              {/* Liste des notes chronologique */}
-              <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
-                {notes.length === 0 ? (
-                  <p className="text-center py-4 text-xs text-slate-300 italic font-bold uppercase tracking-widest">Aucune note enregistrée</p>
-                ) : (
-                  notes.map(note => (
-                    <div key={note.id} className="p-3 bg-slate-50 border border-slate-100 rounded-xl group relative hover:border-blue-100 transition-all">
-                      <div className="flex justify-between items-start mb-1">
-                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">
-                          {new Date(note.date).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                        <button 
-                          onClick={() => handleDeleteNote(note.id)}
-                          className="opacity-0 group-hover:opacity-100 p-1 text-slate-300 hover:text-rose-500 transition-all"
-                        >
-                          <Trash2 size={10} />
-                        </button>
-                      </div>
-                      <p className="text-xs font-semibold text-slate-700 leading-relaxed whitespace-pre-wrap">{note.text}</p>
-                    </div>
-                  ))
-                )}
-              </div>
-           </Card>
-
-           {/* Section Coordonnées de Facturation */}
-           <Card className="p-6 border-none shadow-xl shadow-slate-200/40 bg-white">
-              <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-4 flex items-center gap-2">
-                <Info size={16} className="text-blue-600" /> Données Signalétiques
-              </h3>
-              <div className="space-y-4">
-                 <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center shrink-0"><Calendar size={14} className="text-slate-400"/></div>
-                    <div>
-                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Contact Principal</p>
-                       <p className="text-sm font-bold text-slate-700">{client.email}</p>
-                    </div>
-                 </div>
-                 <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center shrink-0"><Package size={14} className="text-slate-400"/></div>
-                    <div>
-                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Dernière Commande</p>
-                       <p className="text-sm font-bold text-slate-700">
-                         {clientOrders.length > 0 ? new Date(clientOrders[0].orderDate).toLocaleDateString() : 'N/A'}
-                       </p>
-                    </div>
-                 </div>
-              </div>
-           </Card>
-
-           {/* Alerte Risque */}
-           {stats.balance < -1000 && (
-             <div className="p-5 bg-rose-600 rounded-[24px] text-white shadow-xl shadow-rose-200 animate-pulse">
-                <div className="flex items-center gap-3 mb-2">
-                   <AlertCircle size={20} />
-                   <h4 className="font-black uppercase tracking-widest text-xs">Alerte Débiteur</h4>
+          {/* Coordonnées */}
+          <div className="bg-white border border-gray-100 rounded-lg p-5">
+            <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <Info size={16} className="text-indigo-600" /> Informations
+            </h3>
+            <div className="space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+                  <Calendar size={14} className="text-blue-600"/>
                 </div>
-                <p className="text-xs font-medium opacity-90 leading-relaxed">
-                  Ce client a dépassé le seuil de tolérance de crédit. Il est conseillé de bloquer les nouvelles commandes avant régularisation.
-                </p>
-             </div>
-           )}
+                <div>
+                  <p className="text-xs text-gray-500">Contact</p>
+                  <p className="text-sm font-medium text-gray-900">{client.email}</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0">
+                  <Package size={14} className="text-emerald-600"/>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Dernière Commande</p>
+                  <p className="text-sm font-medium text-gray-900">
+                    {clientOrders.length > 0 ? new Date(clientOrders[0].orderDate).toLocaleDateString() : 'N/A'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Alerte Dette */}
+          {stats.balance < -1000 && (
+            <div className="p-4 bg-rose-50 border border-rose-200 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertCircle size={16} className="text-rose-600" />
+                <h4 className="font-semibold text-sm text-rose-900">Alerte Débiteur</h4>
+              </div>
+              <p className="text-xs text-rose-700 leading-relaxed">
+                Ce client a dépassé le seuil de tolérance de crédit. Il est conseillé de bloquer les nouvelles commandes avant régularisation.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -9,7 +9,7 @@ import {
   Edit3, Trash2, AlertTriangle, Wallet, 
   ArrowUpCircle, ArrowDownCircle, FileText, Upload,
   Filter, RotateCcw, ChevronDown, Tag, Receipt,
-  Clock, MapPin
+  Clock, MapPin, Package, CheckCircle2
 } from 'lucide-react';
 import { TransactionType, PaymentStatus, Transaction } from '../../types';
 
@@ -17,11 +17,41 @@ type TransactionContext = 'ORDER' | 'MATERIAL' | 'CLIENT' | 'SUPPLIER' | 'OTHER'
 
 // Catégories avec vrais icônes
 const CATEGORIES = {
-  CLIENT: { label: 'Client', icon: '👤', color: 'bg-blue-100 text-blue-700 border-blue-200' },
-  SUPPLIER: { label: 'Fournisseur', icon: '🚚', color: 'bg-purple-100 text-purple-700 border-purple-200' },
-  ORDER: { label: 'Commande', icon: '📦', color: 'bg-orange-100 text-orange-700 border-orange-200' },
-  MATERIAL: { label: 'Matière première', icon: '🧱', color: 'bg-amber-100 text-amber-700 border-amber-200' },
-  OTHER: { label: 'Divers', icon: '📋', color: 'bg-slate-100 text-slate-700 border-slate-200' },
+  CLIENT: { 
+    label: 'Client', 
+    icon: User, 
+    color: 'bg-blue-100 text-blue-700 border-blue-200',
+    gradient: 'from-blue-500 to-indigo-600',
+    description: 'Paiement d\'un client'
+  },
+  SUPPLIER: { 
+    label: 'Fournisseur', 
+    icon: Truck, 
+    color: 'bg-purple-100 text-purple-700 border-purple-200',
+    gradient: 'from-purple-500 to-pink-600',
+    description: 'Paiement à un fournisseur'
+  },
+  ORDER: { 
+    label: 'Commande', 
+    icon: ShoppingBag, 
+    color: 'bg-orange-100 text-orange-700 border-orange-200',
+    gradient: 'from-orange-500 to-amber-600',
+    description: 'Transaction liée à une commande'
+  },
+  MATERIAL: { 
+    label: 'Matière première', 
+    icon: Layers, 
+    color: 'bg-amber-100 text-amber-700 border-amber-200',
+    gradient: 'from-amber-500 to-yellow-600',
+    description: 'Achat de matières premières'
+  },
+  OTHER: { 
+    label: 'Autre', 
+    icon: Package, 
+    color: 'bg-slate-100 text-slate-700 border-slate-200',
+    gradient: 'from-slate-500 to-gray-600',
+    description: 'Transaction diverse'
+  },
 };
 
 // Transactions par défaut pour démonstration
@@ -107,7 +137,7 @@ export const TransactionList: React.FC = () => {
     type: TransactionType.INCOME,
     amount: '',
     description: '',
-    category: 'OTHER' as TransactionContext,
+    category: '' as TransactionContext | '',
     date: new Date().toISOString().split('T')[0],
     tiersId: '',
     paymentMethod: 'Virement bancaire',
@@ -157,7 +187,7 @@ export const TransactionList: React.FC = () => {
       type: t.type,
       amount: t.amount.toString(),
       description: t.description,
-      category: (t.category as TransactionContext) || 'OTHER',
+      category: (t.category as TransactionContext) || '',
       date: t.date.split('T')[0],
       tiersId: t.orderId || t.clientId || t.supplierId || t.materialId || '',
       paymentMethod: t.paymentMethod || 'Virement bancaire',
@@ -174,7 +204,7 @@ export const TransactionList: React.FC = () => {
       type: TransactionType.INCOME,
       amount: '',
       description: '',
-      category: 'OTHER',
+      category: '',
       date: new Date().toISOString().split('T')[0],
       tiersId: '',
       paymentMethod: 'Virement bancaire',
@@ -185,6 +215,11 @@ export const TransactionList: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!formData.category) {
+      alert('Veuillez sélectionner une catégorie');
+      return;
+    }
     
     const transactionData: Partial<Transaction> = {
       id: editingTransaction?.id,
@@ -288,7 +323,7 @@ export const TransactionList: React.FC = () => {
       const m = materials.find(mat => mat.id === t.materialId);
       return { label: m?.name || 'Matière', path: `/materials`, icon: <Layers size={14} /> };
     }
-    return { label: 'Divers', path: null, icon: null };
+    return { label: 'Autre', path: null, icon: null };
   };
 
   const getTiersOptions = () => {
@@ -316,83 +351,97 @@ export const TransactionList: React.FC = () => {
     }
   };
 
+  const getCategoryBadge = (category: string) => {
+    const cat = CATEGORIES[category as keyof typeof CATEGORIES] || CATEGORIES.OTHER;
+    const IconComponent = cat.icon;
+    return (
+      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg border ${cat.color}`}>
+        <IconComponent size={14} />
+        {cat.label}
+      </span>
+    );
+  };
+
   return (
-    <div className="min-h-screen bg-slate-50 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        
-        {/* Header */}
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900">Trésorerie</h1>
-            <p className="text-sm text-slate-600 mt-1">
-              Gestion des flux financiers • {filteredTransactions.length} transaction{filteredTransactions.length > 1 ? 's' : ''}
-            </p>
+    <div className="bg-[#F8F9FC] min-h-screen font-sans">
+      {/* HEADER TITLE */}
+      <div className="bg-white border-b border-slate-200 px-6 md:px-10 py-6">
+        <div className="max-w-7xl mx-auto">
+          <h1 className="text-3xl font-bold text-slate-900">Trésorerie</h1>
+          <p className="text-sm text-slate-500 mt-2">Gestion des flux financiers et suivi comptable</p>
+        </div>
+      </div>
+
+      {/* MAIN CONTENT */}
+      <div className="p-6 md:p-10">
+        <div className="max-w-7xl mx-auto space-y-6">
+
+          {/* STATS CARDS */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-xl flex items-center justify-center">
+                  <Wallet size={20} className="text-white" />
+                </div>
+                <span className="text-sm font-semibold text-slate-600">Solde Net</span>
+              </div>
+              <p className={`text-3xl font-bold ${totals.balance >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                {totals.balance.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €
+              </p>
+              <p className="text-xs text-slate-500 mt-2">
+                {totals.balance >= 0 ? '↗ Positif' : '↘ Négatif'}
+              </p>
+            </div>
+
+            <div className="bg-white border border-emerald-200 rounded-2xl p-6 shadow-sm">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center">
+                  <ArrowUpCircle size={20} className="text-emerald-600" />
+                </div>
+                <span className="text-sm font-semibold text-emerald-900">Encaissements</span>
+              </div>
+              <p className="text-3xl font-bold text-emerald-600">
+                +{totals.income.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €
+              </p>
+              <p className="text-xs text-emerald-700 mt-2">
+                {filteredTransactions.filter(t => t.type === TransactionType.INCOME).length} opération(s)
+              </p>
+            </div>
+
+            <div className="bg-white border border-rose-200 rounded-2xl p-6 shadow-sm">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 bg-rose-100 rounded-xl flex items-center justify-center">
+                  <ArrowDownCircle size={20} className="text-rose-600" />
+                </div>
+                <span className="text-sm font-semibold text-rose-900">Décaissements</span>
+              </div>
+              <p className="text-3xl font-bold text-rose-600">
+                -{totals.expense.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €
+              </p>
+              <p className="text-xs text-rose-700 mt-2">
+                {filteredTransactions.filter(t => t.type === TransactionType.EXPENSE).length} opération(s)
+              </p>
+            </div>
           </div>
-          <Button onClick={() => setIsModalOpen(true)} className="gap-2">
-            <Plus size={18} /> Nouvelle Transaction
-          </Button>
-        </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="p-6 bg-gradient-to-br from-slate-900 to-slate-800 text-white">
-            <div className="flex items-center gap-3 mb-3">
-              <Wallet size={20} />
-              <span className="text-sm font-medium opacity-90">Solde Net</span>
-            </div>
-            <p className={`text-3xl font-bold ${totals.balance >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-              {totals.balance.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €
-            </p>
-            <p className="text-xs text-slate-400 mt-2">
-              {totals.balance >= 0 ? '↗ Positif' : '↘ Négatif'}
-            </p>
-          </Card>
-
-          <Card className="p-6 border-emerald-100 bg-emerald-50">
-            <div className="flex items-center gap-3 mb-3">
-              <ArrowUpCircle size={20} className="text-emerald-600" />
-              <span className="text-sm font-medium text-emerald-900">Encaissements</span>
-            </div>
-            <p className="text-3xl font-bold text-emerald-600">
-              +{totals.income.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €
-            </p>
-            <p className="text-xs text-emerald-700 mt-2">
-              {filteredTransactions.filter(t => t.type === TransactionType.INCOME).length} opération(s)
-            </p>
-          </Card>
-
-          <Card className="p-6 border-rose-100 bg-rose-50">
-            <div className="flex items-center gap-3 mb-3">
-              <ArrowDownCircle size={20} className="text-rose-600" />
-              <span className="text-sm font-medium text-rose-900">Décaissements</span>
-            </div>
-            <p className="text-3xl font-bold text-rose-600">
-              -{totals.expense.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €
-            </p>
-            <p className="text-xs text-rose-700 mt-2">
-              {filteredTransactions.filter(t => t.type === TransactionType.EXPENSE).length} opération(s)
-            </p>
-          </Card>
-        </div>
-
-        {/* Search & Filters */}
-        <Card className="p-4">
-          <div className="flex flex-col lg:flex-row gap-3">
-            <div className="flex-1 relative">
-              <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input 
-                placeholder="Rechercher par description, référence, tiers..." 
-                className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all" 
-                value={searchTerm} 
-                onChange={(e) => setSearchTerm(e.target.value)} 
+          {/* ACTIONS & SEARCH */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <input
+                type="text"
+                placeholder="Rechercher par description, référence, tiers..."
+                className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
             <div className="flex gap-2">
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all ${
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                   showFilters 
-                    ? 'bg-blue-600 text-white' 
+                    ? 'bg-indigo-600 text-white shadow-md' 
                     : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
                 }`}
               >
@@ -408,531 +457,539 @@ export const TransactionList: React.FC = () => {
               {activeFiltersCount > 0 && (
                 <button
                   onClick={resetFilters}
-                  className="p-2.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+                  className="p-2.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all border border-slate-200"
                   title="Réinitialiser les filtres"
                 >
                   <RotateCcw size={18} />
                 </button>
               )}
             </div>
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="flex items-center gap-2 px-5 py-2.5 bg-[#6366F1] text-white rounded-lg text-sm font-semibold hover:bg-[#5558E3] transition-all shadow-md hover:shadow-lg whitespace-nowrap"
+            >
+              <Plus size={18} />
+              Nouvelle Transaction
+            </button>
           </div>
 
-          {/* Advanced Filters Panel */}
+          {/* ADVANCED FILTERS PANEL */}
           {showFilters && (
-            <div className="mt-4 pt-4 border-t border-slate-200 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* Type de flux */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-2">Type de flux</label>
-                <select
-                  value={filterType}
-                  onChange={(e) => setFilterType(e.target.value as any)}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none text-sm"
-                >
-                  <option value="all">Tous</option>
-                  <option value={TransactionType.INCOME}>💰 Encaissements</option>
-                  <option value={TransactionType.EXPENSE}>💸 Décaissements</option>
-                </select>
-              </div>
+            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Type de flux */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Type de flux</label>
+                  <select
+                    value={filterType}
+                    onChange={(e) => setFilterType(e.target.value as any)}
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none text-sm bg-white"
+                  >
+                    <option value="all">Tous</option>
+                    <option value={TransactionType.INCOME}>💰 Encaissements</option>
+                    <option value={TransactionType.EXPENSE}>💸 Décaissements</option>
+                  </select>
+                </div>
 
-              {/* Catégorie */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-2">Catégorie</label>
-                <select
-                  value={filterCategory}
-                  onChange={(e) => setFilterCategory(e.target.value as any)}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none text-sm"
-                >
-                  <option value="all">Toutes</option>
-                  {Object.entries(CATEGORIES).map(([key, cat]) => (
-                    <option key={key} value={key}>
-                      {cat.icon} {cat.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                {/* Catégorie */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Catégorie</label>
+                  <select
+                    value={filterCategory}
+                    onChange={(e) => setFilterCategory(e.target.value as any)}
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none text-sm bg-white"
+                  >
+                    <option value="all">Toutes</option>
+                    {Object.entries(CATEGORIES).map(([key, cat]) => {
+                      const IconComp = cat.icon;
+                      return (
+                        <option key={key} value={key}>
+                          {cat.label}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
 
-              {/* Moyen de paiement */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-2">Moyen de paiement</label>
-                <select
-                  value={filterPaymentMethod}
-                  onChange={(e) => setFilterPaymentMethod(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none text-sm"
-                >
-                  <option value="all">Tous</option>
-                  <option value="Virement bancaire">🏦 Virement bancaire</option>
-                  <option value="Carte bancaire">💳 Carte bancaire</option>
-                  <option value="Chèque">📝 Chèque</option>
-                  <option value="Espèces">💵 Espèces</option>
-                </select>
-              </div>
+                {/* Moyen de paiement */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Moyen de paiement</label>
+                  <select
+                    value={filterPaymentMethod}
+                    onChange={(e) => setFilterPaymentMethod(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none text-sm bg-white"
+                  >
+                    <option value="all">Tous</option>
+                    <option value="Virement bancaire">🏦 Virement bancaire</option>
+                    <option value="Carte bancaire">💳 Carte bancaire</option>
+                    <option value="Chèque">📝 Chèque</option>
+                    <option value="Espèces">💵 Espèces</option>
+                  </select>
+                </div>
 
-              {/* Statut */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-2">Statut</label>
-                <select
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value as any)}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none text-sm"
-                >
-                  <option value="all">Tous</option>
-                  <option value={PaymentStatus.PAYEE}>✅ Payé</option>
-                  <option value={PaymentStatus.EN_ATTENTE}>⏳ En attente</option>
-                  <option value={PaymentStatus.EN_RETARD}>⚠️ En retard</option>
-                </select>
-              </div>
+                {/* Statut */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Statut</label>
+                  <select
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value as any)}
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none text-sm bg-white"
+                  >
+                    <option value="all">Tous</option>
+                    <option value={PaymentStatus.PAYEE}>✅ Payé</option>
+                    <option value={PaymentStatus.EN_ATTENTE}>⏳ En attente</option>
+                    <option value={PaymentStatus.EN_RETARD}>⚠️ En retard</option>
+                  </select>
+                </div>
 
-              {/* Date début */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-2">Date début</label>
-                <input
-                  type="date"
-                  value={filterStartDate}
-                  onChange={(e) => setFilterStartDate(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none text-sm"
-                />
-              </div>
+                {/* Date début */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Date début</label>
+                  <input
+                    type="date"
+                    value={filterStartDate}
+                    onChange={(e) => setFilterStartDate(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none text-sm bg-white"
+                  />
+                </div>
 
-              {/* Date fin */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-2">Date fin</label>
-                <input
-                  type="date"
-                  value={filterEndDate}
-                  onChange={(e) => setFilterEndDate(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none text-sm"
-                />
-              </div>
+                {/* Date fin */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Date fin</label>
+                  <input
+                    type="date"
+                    value={filterEndDate}
+                    onChange={(e) => setFilterEndDate(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none text-sm bg-white"
+                  />
+                </div>
 
-              {/* Montant min */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-2">Montant min (€)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={filterMinAmount}
-                  onChange={(e) => setFilterMinAmount(e.target.value)}
-                  placeholder="0.00"
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none text-sm"
-                />
-              </div>
+                {/* Montant min */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Montant min (€)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={filterMinAmount}
+                    onChange={(e) => setFilterMinAmount(e.target.value)}
+                    placeholder="0.00"
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none text-sm bg-white"
+                  />
+                </div>
 
-              {/* Montant max */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-2">Montant max (€)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={filterMaxAmount}
-                  onChange={(e) => setFilterMaxAmount(e.target.value)}
-                  placeholder="99999.99"
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none text-sm"
-                />
+                {/* Montant max */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Montant max (€)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={filterMaxAmount}
+                    onChange={(e) => setFilterMaxAmount(e.target.value)}
+                    placeholder="99999.99"
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none text-sm bg-white"
+                  />
+                </div>
               </div>
             </div>
           )}
-        </Card>
 
-        {/* Transactions Table */}
-        <Card className="overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-slate-50 border-b border-slate-200">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Date</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Type</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Catégorie</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Description</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Tiers</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Paiement</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Référence</th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold text-slate-600 uppercase">Montant</th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold text-slate-600 uppercase">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredTransactions.map((t) => {
-                  const tiers = getTiersInfo(t);
-                  const category = CATEGORIES[t.category as keyof typeof CATEGORIES] || CATEGORIES.OTHER;
-                  
-                  return (
-                    <tr key={t.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <Calendar size={14} className="text-slate-400" />
-                          <div>
-                            <p className="text-sm font-medium text-slate-900">
-                              {new Date(t.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
-                            </p>
-                            <p className="text-xs text-slate-500">
-                              {new Date(t.date).toLocaleDateString('fr-FR', { year: 'numeric' })}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        {t.type === TransactionType.INCOME ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-lg border border-emerald-200">
-                            <ArrowUpCircle size={14} strokeWidth={2.5} />
-                            Entrée
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-rose-100 text-rose-700 text-xs font-semibold rounded-lg border border-rose-200">
-                            <ArrowDownCircle size={14} strokeWidth={2.5} />
-                            Sortie
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg border ${category.color}`}>
-                          <span>{category.icon}</span>
-                          {category.label}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <p className="text-sm font-medium text-slate-900 max-w-xs truncate">
-                          {t.description}
-                        </p>
-                        {t.notes && (
-                          <p className="text-xs text-slate-500 mt-1 max-w-xs truncate">
-                            {t.notes}
-                          </p>
-                        )}
-                      </td>
-                      <td className="px-6 py-4">
-                        {tiers.path ? (
-                          <Link to={tiers.path} className="flex items-center gap-1.5 text-blue-600 hover:text-blue-700 text-sm group">
-                            {tiers.icon}
-                            <span className="max-w-[150px] truncate">{tiers.label}</span>
-                            <ExternalLink size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-                          </Link>
-                        ) : (
-                          <span className="text-sm text-slate-500 flex items-center gap-1.5">
-                            {tiers.icon}
-                            {tiers.label}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="text-sm text-slate-700 flex items-center gap-1.5">
-                          <span>{getPaymentMethodIcon(t.paymentMethod || '')}</span>
-                          <span className="max-w-[120px] truncate">{t.paymentMethod || '-'}</span>
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        {t.reference ? (
-                          <div className="flex items-center gap-1.5">
-                            <Receipt size={14} className="text-slate-400" />
-                            <span className="text-xs font-mono text-slate-600 bg-slate-100 px-2 py-1 rounded">
-                              {t.reference}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-slate-400">-</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <p className={`text-base font-bold ${t.type === TransactionType.INCOME ? 'text-emerald-600' : 'text-rose-600'}`}>
-                          {t.type === TransactionType.INCOME ? '+' : '-'}
-                          {t.amount.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €
-                        </p>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex justify-end gap-2">
-                          <button 
-                            onClick={() => handleOpenEdit(t)} 
-                            className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                            title="Modifier"
-                          >
-                            <Edit3 size={16} />
-                          </button>
-                          <button 
-                            onClick={() => { setTransactionToDelete(t); setIsDeleteModalOpen(true); }} 
-                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors"
-                            title="Supprimer"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      </td>
+          {/* TABLE */}
+          {isLoading ? (
+            <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center">
+              <div className="inline-block animate-spin w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full"></div>
+            </div>
+          ) : (
+            <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Date</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Type</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Catégorie</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Description</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Tiers</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Référence</th>
+                      <th className="px-6 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">Montant</th>
+                      <th className="px-6 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">Actions</th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          {filteredTransactions.length === 0 && (
-            <div className="py-16 text-center">
-              <Wallet size={48} className="mx-auto text-slate-300 mb-4" />
-              <h3 className="text-lg font-semibold text-slate-900 mb-2">Aucune transaction trouvée</h3>
-              <p className="text-sm text-slate-500 mb-4">
-                {searchTerm || activeFiltersCount > 0 
-                  ? 'Essayez de modifier vos critères de recherche' 
-                  : 'Commencez par créer votre première transaction'}
-              </p>
-              {!searchTerm && activeFiltersCount === 0 && (
-                <Button onClick={() => setIsModalOpen(true)} size="sm">
-                  <Plus size={16} /> Créer une transaction
-                </Button>
-              )}
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredTransactions.length === 0 ? (
+                      <tr>
+                        <td colSpan={9} className="px-6 py-12 text-center">
+                          <Wallet size={32} className="text-slate-300 mx-auto mb-3" />
+                          <p className="text-slate-500 font-semibold">Aucune transaction trouvée</p>
+                          <p className="text-slate-400 text-sm mt-1">Essayez un autre terme de recherche</p>
+                        </td>
+                      </tr>
+                    ) : filteredTransactions.map((t) => {
+                      const tiers = getTiersInfo(t);
+                      
+                      return (
+                        <tr key={t.id} className="hover:bg-slate-50 transition-colors group">
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-2">
+                              <Calendar size={14} className="text-slate-400" />
+                              <div>
+                                <p className="text-sm font-medium text-slate-900">
+                                  {new Date(t.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
+                                </p>
+                                <p className="text-xs text-slate-500">
+                                  {new Date(t.date).toLocaleDateString('fr-FR', { year: 'numeric' })}
+                                </p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            {t.type === TransactionType.INCOME ? (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-100 text-emerald-700 text-xs font-medium rounded-lg border border-emerald-200">
+                                <ArrowUpCircle size={14} />
+                                Entrée
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-rose-100 text-rose-700 text-xs font-medium rounded-lg border border-rose-200">
+                                <ArrowDownCircle size={14} />
+                                Sortie
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4">
+                            {getCategoryBadge(t.category || 'OTHER')}
+                          </td>
+                          <td className="px-6 py-4">
+                            <p className="text-sm font-medium text-slate-900 max-w-xs truncate">
+                              {t.description}
+                            </p>
+                            {t.notes && (
+                              <p className="text-xs text-slate-500 mt-1 max-w-xs truncate">
+                                {t.notes}
+                              </p>
+                            )}
+                          </td>
+                          <td className="px-6 py-4">
+                            {tiers.path ? (
+                              <Link to={tiers.path} className="flex items-center gap-1.5 text-indigo-600 hover:text-indigo-800 hover:underline text-sm font-medium group">
+                                {tiers.icon}
+                                <span className="max-w-[150px] truncate">{tiers.label}</span>
+                                <ExternalLink size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                              </Link>
+                            ) : (
+                              <span className="text-sm text-slate-500 flex items-center gap-1.5">
+                                {tiers.icon}
+                                {tiers.label}
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4">
+                            {t.reference ? (
+                              <div className="flex items-center gap-1.5">
+                                <Receipt size={14} className="text-slate-400" />
+                                <span className="text-xs font-mono text-slate-600 bg-slate-100 px-2 py-1 rounded">
+                                  {t.reference}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-xs text-slate-400">-</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <p className={`text-sm font-semibold ${t.type === TransactionType.INCOME ? 'text-emerald-600' : 'text-rose-600'}`}>
+                              {t.type === TransactionType.INCOME ? '+' : '-'}
+                              {t.amount.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €
+                            </p>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <div className="flex justify-end gap-2">
+                              <button 
+                                onClick={() => handleOpenEdit(t)} 
+                                className="p-2 text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-lg border border-amber-200 transition-all font-semibold"
+                              >
+                                <Edit3 size={16} />
+                              </button>
+                              <button 
+                                onClick={() => { setTransactionToDelete(t); setIsDeleteModalOpen(true); }} 
+                                className="p-2 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg border border-rose-200 transition-all font-semibold"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
-        </Card>
+        </div>
+      </div>
 
-        {/* Modal Form */}
-        {isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-            <Card className="w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-              <div className="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center">
+      {/* MODAL FORM */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
+          <div className="w-full max-w-4xl bg-white rounded-2xl shadow-2xl p-6 my-8">
+            <div className="flex justify-between items-center mb-6">
+              <div>
                 <h3 className="text-xl font-bold text-slate-900">
                   {editingTransaction ? 'Modifier la transaction' : 'Nouvelle transaction'}
                 </h3>
-                <button onClick={handleCloseModal} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
-                  <X size={20} />
-                </button>
+                <p className="text-sm text-slate-500 mt-1">Sélectionnez une catégorie et remplissez les informations</p>
+              </div>
+              <button onClick={handleCloseModal} className="p-2 hover:bg-slate-100 rounded-lg transition-all">
+                <X size={20} className="text-slate-600" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-6">
+              
+              {/* CATEGORY SELECTION CARDS */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-3">
+                  Catégorie de transaction *
+                </label>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                  {Object.entries(CATEGORIES).map(([key, cat]) => {
+                    const IconComponent = cat.icon;
+                    const isSelected = formData.category === key;
+                    
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, category: key as TransactionContext, tiersId: '' }))}
+                        className={`relative p-4 rounded-xl border-2 transition-all ${
+                          isSelected 
+                            ? 'border-indigo-500 bg-indigo-50 shadow-md' 
+                            : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm'
+                        }`}
+                      >
+                        {isSelected && (
+                          <div className="absolute -top-2 -right-2 w-6 h-6 bg-indigo-600 rounded-full flex items-center justify-center">
+                            <CheckCircle2 size={14} className="text-white" />
+                          </div>
+                        )}
+                        <div className={`w-12 h-12 mx-auto mb-2 rounded-xl bg-gradient-to-br ${cat.gradient} flex items-center justify-center`}>
+                          <IconComponent size={24} className="text-white" />
+                        </div>
+                        <p className={`text-xs font-semibold text-center ${isSelected ? 'text-indigo-900' : 'text-slate-700'}`}>
+                          {cat.label}
+                        </p>
+                        <p className="text-[10px] text-slate-500 text-center mt-1">
+                          {cat.description}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
-              <form onSubmit={handleSubmit} className="p-6 space-y-6">
-                
-                {/* Type & Date & Catégorie */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Type de flux *
-                    </label>
-                    <select 
-                      value={formData.type}
-                      onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as TransactionType }))}
-                      className="w-full px-3 py-2.5 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
-                      required
-                    >
-                      <option value={TransactionType.INCOME}>💰 Encaissement</option>
-                      <option value={TransactionType.EXPENSE}>💸 Décaissement</option>
-                    </select>
-                  </div>
+              {/* DYNAMIC FORM BASED ON CATEGORY */}
+              {formData.category && (
+                <>
+                  {/* Type & Date */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">
+                        Type de flux *
+                      </label>
+                      <select 
+                        value={formData.type}
+                        onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as TransactionType }))}
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                        required
+                      >
+                        <option value={TransactionType.INCOME}>💰 Encaissement</option>
+                        <option value={TransactionType.EXPENSE}>💸 Décaissement</option>
+                      </select>
+                    </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Date *
-                    </label>
-                    <input 
-                      type="date" 
-                      value={formData.date}
-                      onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
-                      className="w-full px-3 py-2.5 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
-                      required 
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Catégorie *
-                    </label>
-                    <select 
-                      value={formData.category}
-                      onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value as TransactionContext, tiersId: '' }))}
-                      className="w-full px-3 py-2.5 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
-                      required
-                    >
-                      {Object.entries(CATEGORIES).map(([key, cat]) => (
-                        <option key={key} value={key}>
-                          {cat.icon} {cat.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                {/* Montant & Moyen de paiement */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Montant (€) *
-                    </label>
-                    <div className="relative">
-                      <DollarSign size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">
+                        Date *
+                      </label>
                       <input 
-                        type="number" 
-                        step="0.01" 
-                        value={formData.amount}
-                        onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
-                        className="w-full pl-10 pr-3 py-2.5 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
-                        placeholder="0.00"
+                        type="date" 
+                        value={formData.date}
+                        onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
                         required 
                       />
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Moyen de paiement *
-                    </label>
-                    <select 
-                      value={formData.paymentMethod}
-                      onChange={(e) => setFormData(prev => ({ ...prev, paymentMethod: e.target.value }))}
-                      className="w-full px-3 py-2.5 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
-                      required
-                    >
-                      <option value="Virement bancaire">🏦 Virement bancaire</option>
-                      <option value="Carte bancaire">💳 Carte bancaire</option>
-                      <option value="Chèque">📝 Chèque</option>
-                      <option value="Espèces">💵 Espèces</option>
-                    </select>
+                  {/* Tiers selection (if not OTHER) */}
+                  {formData.category !== 'OTHER' && (
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">
+                        {formData.category === 'CLIENT' && '👤 Client associé'}
+                        {formData.category === 'SUPPLIER' && '🚚 Fournisseur associé'}
+                        {formData.category === 'ORDER' && '📦 Commande associée'}
+                        {formData.category === 'MATERIAL' && '🧱 Matière première associée'}
+                      </label>
+                      <select 
+                        value={formData.tiersId}
+                        onChange={(e) => setFormData(prev => ({ ...prev, tiersId: e.target.value }))}
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                      >
+                        <option value="">Aucun (optionnel)</option>
+                        {getTiersOptions().map(opt => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {/* Montant & Moyen de paiement */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">
+                        Montant (€) *
+                      </label>
+                      <div className="relative">
+                        <DollarSign size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <input 
+                          type="number" 
+                          step="0.01" 
+                          value={formData.amount}
+                          onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
+                          className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                          placeholder="0.00"
+                          required 
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">
+                        Moyen de paiement *
+                      </label>
+                      <select 
+                        value={formData.paymentMethod}
+                        onChange={(e) => setFormData(prev => ({ ...prev, paymentMethod: e.target.value }))}
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                        required
+                      >
+                        <option value="Virement bancaire">🏦 Virement bancaire</option>
+                        <option value="Carte bancaire">💳 Carte bancaire</option>
+                        <option value="Chèque">📝 Chèque</option>
+                        <option value="Espèces">💵 Espèces</option>
+                      </select>
+                    </div>
                   </div>
-                </div>
 
-                {/* Tiers selection */}
-                {formData.category !== 'OTHER' && (
+                  {/* Description */}
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      {formData.category === 'CLIENT' && 'Client'}
-                      {formData.category === 'SUPPLIER' && 'Fournisseur'}
-                      {formData.category === 'ORDER' && 'Commande'}
-                      {formData.category === 'MATERIAL' && 'Matière première'}
+                    <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">
+                      Description *
                     </label>
-                    <select 
-                      value={formData.tiersId}
-                      onChange={(e) => setFormData(prev => ({ ...prev, tiersId: e.target.value }))}
-                      className="w-full px-3 py-2.5 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
-                    >
-                      <option value="">Sélectionner...</option>
-                      {getTiersOptions().map(opt => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                {/* Description */}
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Description *
-                  </label>
-                  <input 
-                    type="text"
-                    value={formData.description}
-                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                    placeholder="ex: Paiement facture #2024-001, Achat matériel..."
-                    className="w-full px-3 py-2.5 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
-                    required 
-                  />
-                </div>
-
-                {/* Référence */}
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Référence / N° de facture
-                  </label>
-                  <div className="relative">
-                    <Receipt size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input 
                       type="text"
-                      value={formData.reference}
-                      onChange={(e) => setFormData(prev => ({ ...prev, reference: e.target.value }))}
-                      placeholder="ex: FAC-2024-001"
-                      className="w-full pl-10 pr-3 py-2.5 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                      value={formData.description}
+                      onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                      placeholder="ex: Paiement facture #2024-001, Achat matériel..."
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                      required 
                     />
                   </div>
-                </div>
 
-                {/* Notes */}
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Notes / Commentaires
-                  </label>
-                  <textarea
-                    value={formData.notes}
-                    onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                    placeholder="Informations complémentaires..."
-                    rows={3}
-                    className="w-full px-3 py-2.5 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all resize-none"
-                  />
-                </div>
-
-                {/* Justificatif */}
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Justificatif (Optionnel)
-                  </label>
-                  <label className="flex items-center gap-3 p-4 border-2 border-dashed border-slate-300 rounded-lg hover:border-blue-400 hover:bg-blue-50/50 transition-all cursor-pointer">
-                    <Upload size={20} className="text-slate-400" />
-                    <div>
-                      <span className="text-sm font-medium text-slate-700 block">Ajouter un document</span>
-                      <span className="text-xs text-slate-500">PNG, JPG, PDF • Max 5MB</span>
+                  {/* Référence */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">
+                      Référence / N° de facture
+                    </label>
+                    <div className="relative">
+                      <Receipt size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <input 
+                        type="text"
+                        value={formData.reference}
+                        onChange={(e) => setFormData(prev => ({ ...prev, reference: e.target.value }))}
+                        placeholder="ex: FAC-2024-001"
+                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                      />
                     </div>
-                    <input type="file" className="hidden" accept=".png,.jpg,.jpeg,.pdf" />
-                  </label>
-                </div>
+                  </div>
 
-                {/* Actions */}
-                <div className="flex gap-3 pt-4 border-t border-slate-200">
-                  <Button 
-                    type="button" 
-                    variant="secondary" 
-                    className="flex-1" 
-                    onClick={handleCloseModal}
-                  >
-                    Annuler
-                  </Button>
-                  <Button 
-                    type="submit" 
-                    className="flex-1" 
-                    isLoading={saveMutation.isPending}
-                  >
-                    {editingTransaction ? 'Enregistrer les modifications' : 'Créer la transaction'}
-                  </Button>
-                </div>
-              </form>
-            </Card>
-          </div>
-        )}
+                  {/* Notes */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">
+                      Notes / Commentaires
+                    </label>
+                    <textarea
+                      value={formData.notes}
+                      onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                      placeholder="Informations complémentaires..."
+                      rows={3}
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all resize-none"
+                    />
+                  </div>
+                </>
+              )}
 
-        {/* Delete Modal */}
-        {isDeleteModalOpen && transactionToDelete && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-            <Card className="w-full max-w-md p-6 text-center">
-              <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                <AlertTriangle size={24} />
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-2">Confirmer la suppression</h3>
-              <p className="text-sm text-slate-600 mb-4">
-                Êtes-vous sûr de vouloir supprimer cette transaction ?
-              </p>
-              <div className="p-4 bg-slate-50 rounded-lg mb-6 text-left">
-                <p className="text-sm font-medium text-slate-900 mb-2">{transactionToDelete.description}</p>
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-slate-500">
-                    {new Date(transactionToDelete.date).toLocaleDateString('fr-FR')}
-                  </span>
-                  <p className={`text-lg font-bold ${transactionToDelete.type === TransactionType.INCOME ? 'text-emerald-600' : 'text-rose-600'}`}>
-                    {transactionToDelete.type === TransactionType.INCOME ? '+' : '-'}
-                    {transactionToDelete.amount.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €
-                  </p>
-                </div>
-              </div>
-              <p className="text-xs text-slate-500 mb-6">Cette action est irréversible.</p>
-              <div className="flex gap-3">
-                <Button 
-                  variant="secondary" 
-                  className="flex-1" 
-                  onClick={() => setIsDeleteModalOpen(false)}
+              {/* Actions */}
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={handleCloseModal}
+                  className="flex-1 px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl text-sm font-semibold hover:bg-slate-200 transition-all"
                 >
                   Annuler
-                </Button>
-                <Button 
-                  variant="danger" 
-                  className="flex-1" 
-                  onClick={() => deleteMutation.mutate(transactionToDelete.id)} 
-                  isLoading={deleteMutation.isPending}
+                </button>
+                <button
+                  type="submit"
+                  disabled={saveMutation.isPending || !formData.category}
+                  className="flex-1 px-4 py-2.5 bg-[#6366F1] text-white rounded-xl text-sm font-semibold hover:bg-[#5558E3] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Supprimer définitivement
-                </Button>
+                  {saveMutation.isPending ? 'Enregistrement...' : (editingTransaction ? 'Mettre à jour' : 'Enregistrer')}
+                </button>
               </div>
-            </Card>
+            </form>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* MODAL SUPPRESSION */}
+      {isDeleteModalOpen && transactionToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 text-center">
+            <div className="mx-auto w-14 h-14 bg-rose-50 text-rose-600 rounded-xl flex items-center justify-center mb-4">
+              <AlertTriangle size={28} />
+            </div>
+            <h3 className="text-lg font-bold text-slate-900 mb-2">Supprimer la transaction ?</h3>
+            <p className="text-sm text-slate-600 mb-4">
+              Vous êtes sur le point de supprimer cette transaction. Cette action est irréversible.
+            </p>
+            <div className="p-4 bg-slate-50 rounded-xl mb-6 text-left">
+              <p className="text-sm font-medium text-slate-900 mb-2">{transactionToDelete.description}</p>
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-slate-500">
+                  {new Date(transactionToDelete.date).toLocaleDateString('fr-FR')}
+                </span>
+                <p className={`text-base font-bold ${transactionToDelete.type === TransactionType.INCOME ? 'text-emerald-600' : 'text-rose-600'}`}>
+                  {transactionToDelete.type === TransactionType.INCOME ? '+' : '-'}
+                  {transactionToDelete.amount.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setIsDeleteModalOpen(false); setTransactionToDelete(null); }}
+                className="flex-1 px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl text-sm font-semibold hover:bg-slate-200 transition-all"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={() => deleteMutation.mutate(transactionToDelete.id)}
+                disabled={deleteMutation.isPending}
+                className="flex-1 px-4 py-2.5 bg-rose-600 text-white rounded-xl text-sm font-semibold hover:bg-rose-700 transition-all disabled:opacity-50"
+              >
+                {deleteMutation.isPending ? 'Suppression...' : 'Supprimer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

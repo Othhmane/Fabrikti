@@ -93,7 +93,7 @@ export const Badge: React.FC<{ children: React.ReactNode; color?: 'blue' | 'gree
     yellow: 'bg-yellow-50 text-yellow-700 border border-yellow-100',
     gray: 'bg-gray-50 text-gray-700 border border-gray-100',
   };
-  return <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider ${colors[color]}`}>{children}</span>;
+  return <span className={`px-2.5 py-0.5 rounded-full text-[15px] font-bold uppercase tracking-wider ${colors[color]}`}>{children}</span>;
 };
 
 /**

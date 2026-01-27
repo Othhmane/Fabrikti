@@ -1,31 +1,74 @@
-
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { FabriktiService } from '../../api/services';
-import { Card, Badge, Button, DesktopTable, Input } from '../../components/UI';
 import { OrderStatus, PaymentStatus, Order, OrderItem } from '../../types';
-import { 
-  Clock, Package, Truck, Database, Plus, Search, 
-  X, RotateCcw, Ban, Trash2, Edit3,
-  ShoppingCart, ChevronRight, CheckCircle2, 
-  AlertTriangle, Printer, FileText, CheckCircle
+import {
+  Clock, Package, Truck, Database, Plus, Search,
+  X, Ban, Trash2, Edit3, ShoppingCart, CheckCircle2,
+  AlertTriangle, Printer, FileText, Info, User,
+  Calendar, DollarSign, Filter, RotateCcw, ChevronDown, ChevronRight
 } from 'lucide-react';
 
-const STATUS_LABELS: Record<string, { label: string, color: any, icon: any }> = {
-  [OrderStatus.EN_ATTENTE]: { label: 'En attente', color: 'slate' as any, icon: <Clock size={12}/> },
-  [OrderStatus.EN_PREPARATION]: { label: 'Préparation', color: 'yellow' as any, icon: <Package size={12}/> },
-  [OrderStatus.EN_STOCK]: { label: 'En stock', color: 'indigo' as any, icon: <Database size={12}/> },
-  [OrderStatus.LIVREE]: { label: 'Livrée', color: 'emerald' as any, icon: <CheckCircle2 size={12}/> },
-  [OrderStatus.ANNULEE]: { label: 'Annulée', color: 'rose' as any, icon: <Ban size={12}/> },
+const STATUS_LABELS: Record<string, { label: string, bgColor: string, textColor: string, icon: any }> = {
+  [OrderStatus.EN_ATTENTE]: {
+    label: 'En attente',
+    bgColor: 'bg-slate-100',
+    textColor: 'text-slate-700',
+    icon: <Clock size={12}/>
+  },
+  [OrderStatus.EN_PREPARATION]: {
+    label: 'Préparation',
+    bgColor: 'bg-amber-100',
+    textColor: 'text-amber-700',
+    icon: <Package size={12}/>
+  },
+  [OrderStatus.EN_STOCK]: {
+    label: 'En stock',
+    bgColor: 'bg-indigo-100',
+    textColor: 'text-indigo-700',
+    icon: <Database size={12}/>
+  },
+  [OrderStatus.LIVREE]: {
+    label: 'Livrée',
+    bgColor: 'bg-emerald-100',
+    textColor: 'text-emerald-700',
+    icon: <CheckCircle2 size={12}/>
+  },
+  [OrderStatus.ANNULEE]: {
+    label: 'Annulée',
+    bgColor: 'bg-rose-100',
+    textColor: 'text-rose-700',
+    icon: <Ban size={12}/>
+  },
 };
 
-const PAYMENT_LABELS: Record<string, { label: string, color: any }> = {
-  [PaymentStatus.PAYEE]: { label: 'Payée', color: 'green' as any },
-  [PaymentStatus.PARTIEL]: { label: 'Partiel', color: 'amber' as any },
-  [PaymentStatus.NON_PAYEE]: { label: 'Non payée', color: 'red' as any },
-  [PaymentStatus.EN_DETTE]: { label: 'En dette', color: 'red' as any },
-  [PaymentStatus.EN_PLUS]: { label: 'Crédit', color: 'blue' as any },
+const PAYMENT_LABELS: Record<string, { label: string, bgColor: string, textColor: string }> = {
+  [PaymentStatus.PAYEE]: {
+    label: 'Payée',
+    bgColor: 'bg-emerald-100',
+    textColor: 'text-emerald-700'
+  },
+  [PaymentStatus.PARTIEL]: {
+    label: 'Partiel',
+    bgColor: 'bg-amber-100',
+    textColor: 'text-amber-700'
+  },
+  [PaymentStatus.NON_PAYEE]: {
+    label: 'Non payée',
+    bgColor: 'bg-rose-50',
+    textColor: 'text-rose-700'
+  },
+  [PaymentStatus.EN_DETTE]: {
+    label: 'En dette',
+    bgColor: 'bg-rose-100',
+    textColor: 'text-rose-700'
+  },
+  [PaymentStatus.EN_PLUS]: {
+    label: 'Crédit',
+    bgColor: 'bg-blue-100',
+    textColor: 'text-blue-700'
+  },
 };
 
 export const OrderManagement: React.FC = () => {
@@ -33,13 +76,17 @@ export const OrderManagement: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
-  
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+
   const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   const [selectedOrderForPrint, setSelectedOrderForPrint] = useState<Order | null>(null);
-  
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [filterPaymentStatus, setFilterPaymentStatus] = useState('all');
+  const [showFilters, setShowFilters] = useState(false);
 
   const [items, setItems] = useState<Partial<OrderItem>[]>([{ id: '1', productId: '', quantity: 1, unit: 'paire', unitPrice: 0, totalItemPrice: 0 }]);
 
@@ -86,6 +133,16 @@ export const OrderManagement: React.FC = () => {
     setEditingOrder(null);
   };
 
+  const openDetailsModal = (order: Order) => {
+    setSelectedOrder(order);
+    setIsDetailsModalOpen(true);
+  };
+
+  const closeDetailsModal = () => {
+    setIsDetailsModalOpen(false);
+    setSelectedOrder(null);
+  };
+
   const addLine = () => {
     setItems([...items, { id: Date.now().toString(), productId: '', quantity: 1, unit: 'paire', unitPrice: 0, totalItemPrice: 0 }]);
   };
@@ -112,322 +169,676 @@ export const OrderManagement: React.FC = () => {
 
   const totalOrderPrice = useMemo(() => items.reduce((sum, i) => sum + (i.totalItemPrice || 0), 0), [items]);
 
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const data: Partial<Order> = {
+      id: editingOrder?.id,
+      clientId: formData.get('clientId') as string,
+      orderDate: formData.get('orderDate') as string,
+      deliveryDate: formData.get('deliveryDate') as string || undefined,
+      status: (formData.get('status') as OrderStatus) || OrderStatus.EN_ATTENTE,
+      items: items as OrderItem[],
+      totalPrice: totalOrderPrice,
+      paidAmount: editingOrder?.paidAmount || 0,
+      paymentStatus: editingOrder?.paymentStatus || PaymentStatus.NON_PAYEE,
+      notes: formData.get('notes') as string || undefined,
+    };
+    saveMutation.mutate(data);
+  };
+
   const filteredOrders = useMemo(() => {
     if (!orders) return [];
     return orders.filter(order => {
       const client = clients?.find(c => c.id === order.clientId);
       const matchesSearch = order.id.toLowerCase().includes(searchTerm.toLowerCase()) || client?.name.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStatus = filterStatus === 'all' || order.status === filterStatus;
-      return matchesSearch && matchesStatus;
+      const matchesPayment = filterPaymentStatus === 'all' || order.paymentStatus === filterPaymentStatus;
+      return matchesSearch && matchesStatus && matchesPayment;
     }).sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
-  }, [orders, clients, searchTerm, filterStatus]);
+  }, [orders, clients, searchTerm, filterStatus, filterPaymentStatus]);
+
+  const resetFilters = () => {
+    setFilterStatus('all');
+    setFilterPaymentStatus('all');
+  };
+
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (filterStatus !== 'all') count++;
+    if (filterPaymentStatus !== 'all') count++;
+    return count;
+  }, [filterStatus, filterPaymentStatus]);
+
+  // Stats
+  const stats = useMemo(() => {
+    const total = filteredOrders.length;
+    const totalAmount = filteredOrders.reduce((sum, o) => sum + o.totalPrice, 0);
+    const delivered = filteredOrders.filter(o => o.status === OrderStatus.LIVREE).length;
+    const pending = filteredOrders.filter(o => o.status === OrderStatus.EN_ATTENTE || o.status === OrderStatus.EN_PREPARATION).length;
+    return { total, totalAmount, delivered, pending };
+  }, [filteredOrders]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h2 className="text-2xl font-black text-slate-900 tracking-tighter uppercase leading-tight">Commandes Atelier</h2>
-          <p className="text-slate-500 font-medium italic text-xs tracking-tight">Suivi de fabrication et bons de livraison.</p>
+    <div className="bg-[#F8F9FC] min-h-screen font-sans">
+      {/* HEADER TITLE */}
+      <div className="bg-white border-b border-slate-200 px-6 md:px-10 py-6">
+        <div className="max-w-7xl mx-auto">
+          <h1 className="text-3xl font-bold text-slate-900">Commandes Atelier</h1>
+          <p className="text-sm text-slate-500 mt-2">Suivi de fabrication et bons de livraison</p>
         </div>
-        <Button onClick={handleOpenCreate} className="w-full sm:w-auto h-12 px-6 shadow-xl shadow-blue-500/20 text-xs font-black uppercase tracking-widest">
-          <Plus size={18} /> Nouveau Bon
-        </Button>
       </div>
 
-      {/* FILTRES */}
-      <div className="bg-white rounded-[24px] border border-slate-200 shadow-sm p-4 flex flex-wrap gap-4 items-center">
-        <div className="flex-1 min-w-[240px] relative">
-          <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input 
-            placeholder="Référence ou client..." 
-            className="w-full pl-12 h-11 rounded-xl bg-slate-50 border-none focus:ring-4 focus:ring-blue-100 text-sm font-semibold"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-        <select 
-          className="h-11 rounded-xl bg-slate-50 border-none text-xs font-bold px-5 outline-none focus:ring-4 focus:ring-blue-100"
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-        >
-          <option value="all">Tous les statuts</option>
-          {Object.values(OrderStatus).map(s => <option key={s} value={s}>{STATUS_LABELS[s]?.label || s}</option>)}
-        </select>
-        <button onClick={() => {setSearchTerm(''); setFilterStatus('all')}} className="p-2.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"><RotateCcw size={20}/></button>
-      </div>
+      {/* MAIN CONTENT */}
+      <div className="p-6 md:p-10">
+        <div className="max-w-7xl mx-auto space-y-6">
 
-      {isLoading ? (
-        <div className="py-24 text-center"><div className="inline-block animate-spin w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full"></div></div>
-      ) : (
-        <>
-          {/* VUE DESKTOP */}
-          <DesktopTable headers={['Bon #', 'Client', 'Statut', 'Paiement', 'Montant', 'Actions']}>
-            {filteredOrders.length === 0 ? (
-              <tr><td colSpan={6} className="px-8 py-20 text-center text-slate-300 italic font-bold">Aucune commande.</td></tr>
-            ) : filteredOrders.map(order => {
-              const client = clients?.find(c => c.id === order.clientId);
-              const statusConfig = STATUS_LABELS[order.status] || { label: order.status, color: 'gray', icon: null };
-              return (
-                <tr key={order.id} className="hover:bg-slate-50/50 transition-colors group">
-                  <td className="px-6 py-5 font-black text-slate-900 text-xs">#{order.id.slice(0,8).toUpperCase()}</td>
-                  <td className="px-6 py-5">
-                    <Link to={`/clients/${order.clientId}/history`} className="text-xs font-black text-blue-600 hover:text-blue-800 uppercase tracking-tight hover:underline">
-                      {client?.name || 'Inconnu'}
-                    </Link>
-                  </td>
-                  <td className="px-6 py-5"><Badge color={statusConfig.color}><span className="flex items-center gap-1.5">{statusConfig.icon}{statusConfig.label}</span></Badge></td>
-                  <td className="px-6 py-5"><Badge color={PAYMENT_LABELS[order.paymentStatus]?.color || 'gray'}>{PAYMENT_LABELS[order.paymentStatus]?.label || order.paymentStatus}</Badge></td>
-                  <td className="px-6 py-5 font-black text-slate-900 text-sm">{order.totalPrice.toLocaleString()} €</td>
-                  <td className="px-6 py-5 text-right">
-                    <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => handleOpenPrint(order)} className="p-2 text-slate-400 hover:text-indigo-600" title="Imprimer BC"><Printer size={18} /></button>
-                      <Link to={`/orders/${order.id}`} className="p-2 text-slate-400 hover:text-blue-600"><ChevronRight size={18} /></Link>
-                      <button onClick={() => handleOpenEdit(order)} className="p-2 text-slate-400 hover:text-amber-600"><Edit3 size={18} /></button>
-                      <button onClick={() => { setOrderToDelete(order); setIsDeleteModalOpen(true); }} className="p-2 text-slate-400 hover:text-red-600"><Trash2 size={18} /></button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </DesktopTable>
+          {/* STATS CARDS */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-xl flex items-center justify-center">
+                  <ShoppingCart size={20} className="text-white" />
+                </div>
+                <span className="text-sm font-semibold text-slate-600">Total Commandes</span>
+              </div>
+              <p className="text-3xl font-bold text-slate-900">{stats.total}</p>
+              <p className="text-xs text-slate-500 mt-2">Toutes périodes</p>
+            </div>
 
-          {/* VUE MOBILE */}
-          <div className="md:hidden space-y-4">
-            {filteredOrders.map(order => {
-              const client = clients?.find(c => c.id === order.clientId);
-              return (
-                <Card key={order.id} className="p-5 space-y-4">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">CMD-{order.id.slice(0,8).toUpperCase()}</p>
-                      <Link to={`/clients/${order.clientId}/history`} className="text-sm font-black text-blue-600 uppercase tracking-tight hover:underline">
-                        {client?.name || 'Inconnu'}
-                      </Link>
-                    </div>
-                    <Badge color={STATUS_LABELS[order.status]?.color}>{STATUS_LABELS[order.status]?.label}</Badge>
-                  </div>
-                  <div className="flex justify-between items-center pt-2 border-t border-slate-50">
-                    <Badge color={PAYMENT_LABELS[order.paymentStatus]?.color}>{PAYMENT_LABELS[order.paymentStatus]?.label}</Badge>
-                    <p className="text-xl font-black text-slate-900">{order.totalPrice.toLocaleString()} €</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <button onClick={() => handleOpenPrint(order)} className="p-3 bg-slate-100 text-indigo-600 rounded-xl"><Printer size={18}/></button>
-                    <Link to={`/orders/${order.id}`} className="flex-1"><Button variant="secondary" className="w-full h-11 text-xs font-black uppercase"><ChevronRight size={16}/> Voir</Button></Link>
-                    <button onClick={() => handleOpenEdit(order)} className="p-3 bg-slate-50 text-slate-500 rounded-xl"><Edit3 size={18}/></button>
-                    <button onClick={() => { setOrderToDelete(order); setIsDeleteModalOpen(true); }} className="p-3 bg-red-50 text-red-500 rounded-xl"><Trash2 size={18}/></button>
-                  </div>
-                </Card>
-              );
-            })}
+            <div className="bg-white border border-emerald-200 rounded-2xl p-6 shadow-sm">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center">
+                  <CheckCircle2 size={20} className="text-emerald-600" />
+                </div>
+                <span className="text-sm font-semibold text-emerald-900">Livrées</span>
+              </div>
+              <p className="text-3xl font-bold text-emerald-600">{stats.delivered}</p>
+              <p className="text-xs text-emerald-700 mt-2">Commandes terminées</p>
+            </div>
+
+            <div className="bg-white border border-amber-200 rounded-2xl p-6 shadow-sm">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center">
+                  <Clock size={20} className="text-amber-600" />
+                </div>
+                <span className="text-sm font-semibold text-amber-900">En cours</span>
+              </div>
+              <p className="text-3xl font-bold text-amber-600">{stats.pending}</p>
+              <p className="text-xs text-amber-700 mt-2">À traiter</p>
+            </div>
+
+            <div className="bg-white border border-indigo-200 rounded-2xl p-6 shadow-sm">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center">
+                  <DollarSign size={20} className="text-indigo-600" />
+                </div>
+                <span className="text-sm font-semibold text-indigo-900">Montant Total</span>
+              </div>
+              <p className="text-3xl font-bold text-indigo-600">{stats.totalAmount.toLocaleString()} €</p>
+              <p className="text-xs text-indigo-700 mt-2">Chiffre d'affaires</p>
+            </div>
           </div>
-        </>
-      )}
 
-      {/* MODAL PRINT PDF PROFESSIONNEL */}
-      {isPrintModalOpen && selectedOrderForPrint && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md overflow-y-auto">
-          <Card className="w-full max-w-4xl bg-white rounded-[40px] shadow-3xl overflow-hidden border-none animate-in zoom-in-95 duration-300">
-            {/* Header d'aperçu */}
-            <div className="bg-slate-900 px-8 py-5 flex justify-between items-center text-white sticky top-0 z-10">
-               <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center font-black text-sm">F</div>
-                  <span className="text-xs font-black uppercase tracking-[0.2em]">Aperçu Bon de Commande</span>
-               </div>
-               <div className="flex gap-3">
-                  <Button variant="ghost" className="text-white hover:bg-white/10 h-10 px-5 text-xs font-black uppercase tracking-widest" onClick={() => window.print()}>
-                     <Printer size={18} /> Imprimer PDF
-                  </Button>
-                  <button onClick={() => setIsPrintModalOpen(false)} className="p-2 hover:bg-white/10 rounded-xl transition-all"><X size={24}/></button>
-               </div>
+          {/* ACTIONS & SEARCH */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <input
+                type="text"
+                placeholder="Rechercher par référence ou client..."
+                className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                  showFilters
+                    ? 'bg-indigo-600 text-white shadow-md'
+                    : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                <Filter size={18} />
+                Filtres
+                {activeFiltersCount > 0 && (
+                  <span className="ml-1 px-1.5 py-0.5 bg-white/20 rounded text-xs font-bold">
+                    {activeFiltersCount}
+                  </span>
+                )}
+                <ChevronDown size={16} className={`transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+              </button>
+              {activeFiltersCount > 0 && (
+                <button
+                  onClick={resetFilters}
+                  className="p-2.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all border border-slate-200"
+                  title="Réinitialiser les filtres"
+                >
+                  <RotateCcw size={18} />
+                </button>
+              )}
+            </div>
+            <button
+              onClick={handleOpenCreate}
+              className="flex items-center gap-2 px-5 py-2.5 bg-[#6366F1] text-white rounded-lg text-sm font-semibold hover:bg-[#5558E3] transition-all shadow-md hover:shadow-lg whitespace-nowrap"
+            >
+              <Plus size={18} />
+              Nouveau Bon
+            </button>
+          </div>
 
-            {/* Corps du Document */}
-            <div className="p-12 lg:p-20 bg-white min-h-[900px] flex flex-col print:p-0">
-               <div className="flex justify-between items-start mb-16">
-                  <div className="space-y-2">
-                     <h1 className="text-5xl font-black text-slate-900 tracking-tighter uppercase mb-4">Bon de<br/>Commande</h1>
-                     <div className="flex items-center gap-3 text-sm">
-                        <span className="px-3 py-1 bg-slate-100 rounded-lg font-black text-slate-900">BC-{selectedOrderForPrint.id.slice(0,8).toUpperCase()}</span>
-                        <span className="text-slate-400 font-bold uppercase tracking-widest">Émis le {new Date(selectedOrderForPrint.orderDate).toLocaleDateString()}</span>
-                     </div>
-                  </div>
-                  <div className="text-right">
-                     <div className="w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center font-black text-white text-2xl ml-auto mb-4 shadow-xl">F</div>
-                     <p className="font-black text-slate-900 text-lg uppercase tracking-tight">Fabrikti Industrie</p>
-                     <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest leading-relaxed mt-2">
-                        Zone Industrielle Nord<br/>
-                        Atelier de Production 4<br/>
-                        75000 Paris, France
-                     </p>
-                  </div>
-               </div>
+          {/* ADVANCED FILTERS PANEL */}
+          {showFilters && (
+            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Statut commande */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Statut de la commande</label>
+                  <select
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none text-sm bg-white"
+                  >
+                    <option value="all">Tous les statuts</option>
+                    {Object.values(OrderStatus).map(s => <option key={s} value={s}>{STATUS_LABELS[s]?.label || s}</option>)}
+                  </select>
+                </div>
 
-               <div className="grid grid-cols-2 gap-20 mb-20">
-                  <div className="space-y-5">
-                     <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.3em] border-b pb-2">Destinataire / Client</p>
-                     <div className="space-y-1">
-                        <p className="text-2xl font-black text-slate-900 uppercase tracking-tighter">
-                           {clients?.find(c => c.id === selectedOrderForPrint.clientId)?.name || 'Partenaire Fabrikti'}
-                        </p>
-                        <p className="text-sm text-slate-500 font-bold leading-relaxed max-w-xs">
-                           {clients?.find(c => c.id === selectedOrderForPrint.clientId)?.address || 'Adresse d\'expédition en attente'}
-                        </p>
-                        <p className="text-xs font-black text-blue-600 mt-2">{clients?.find(c => c.id === selectedOrderForPrint.clientId)?.email}</p>
-                     </div>
-                  </div>
-                  <div className="space-y-5">
-                     <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.3em] border-b pb-2">Informations</p>
-                     <div className="space-y-3">
-                        <div className="flex justify-between text-xs font-black uppercase"><span className="text-slate-400">Statut Prod:</span> <span className="text-slate-900">{selectedOrderForPrint.status}</span></div>
-                        <div className="flex justify-between text-xs font-black uppercase"><span className="text-slate-400">Paiement:</span> <span className="text-slate-900">{selectedOrderForPrint.paymentStatus}</span></div>
-                        <div className="flex justify-between text-xs font-black uppercase"><span className="text-slate-400">Réf Interne:</span> <span className="text-slate-900">CMD-{selectedOrderForPrint.id.slice(0,5)}</span></div>
-                     </div>
-                  </div>
-               </div>
+                {/* Statut paiement */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Statut du paiement</label>
+                  <select
+                    value={filterPaymentStatus}
+                    onChange={(e) => setFilterPaymentStatus(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none text-sm bg-white"
+                  >
+                    <option value="all">Tous les paiements</option>
+                    {Object.values(PaymentStatus).map(p => <option key={p} value={p}>{PAYMENT_LABELS[p]?.label || p}</option>)}
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
 
-               {/* Table PDF */}
-               <div className="flex-1">
-                  <table className="w-full text-left border-collapse">
-                     <thead>
-                        <tr className="border-b-2 border-slate-900">
-                           <th className="py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Référence / Article</th>
-                           <th className="py-5 text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">Qté</th>
-                           <th className="py-5 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Unit. HT</th>
-                           <th className="py-5 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Total HT</th>
+          {/* TABLE */}
+          {isLoading ? (
+            <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center">
+              <div className="inline-block animate-spin w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full"></div>
+            </div>
+          ) : (
+            <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Bon #</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Client</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Date</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Statut</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Paiement</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Montant</th>
+                      <th className="px-6 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredOrders.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="px-6 py-12 text-center">
+                          <ShoppingCart size={32} className="text-slate-300 mx-auto mb-3" />
+                          <p className="text-slate-500 font-semibold">Aucune commande trouvée</p>
+                          <p className="text-slate-400 text-sm mt-1">Essayez un autre terme de recherche</p>
+                        </td>
+                      </tr>
+                    ) : filteredOrders.map(order => {
+                      const client = clients?.find(c => c.id === order.clientId);
+                      const statusConfig = STATUS_LABELS[order.status] || { label: order.status, bgColor: 'bg-slate-100', textColor: 'text-slate-700', icon: null };
+                      const paymentConfig = PAYMENT_LABELS[order.paymentStatus] || { label: order.paymentStatus, bgColor: 'bg-slate-100', textColor: 'text-slate-700' };
+                      return (
+                        <tr key={order.id} className="hover:bg-slate-50 transition-colors group">
+                          <td className="px-6 py-4">
+                            <span className="text-sm font-medium text-slate-900">#{order.id.slice(0,8).toUpperCase()}</span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <Link to={`/clients/${order.clientId}/history`} className="text-sm text-indigo-600 hover:text-indigo-800 hover:underline font-medium flex items-center gap-1.5">
+                              <User size={14} />
+                              {client?.name || 'Inconnu'}
+                            </Link>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-2">
+                              <Calendar size={14} className="text-slate-400" />
+                              <span className="text-sm text-slate-700">{new Date(order.orderDate).toLocaleDateString('fr-FR')}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium ${statusConfig.bgColor} ${statusConfig.textColor} whitespace-nowrap`}>
+                              {statusConfig.icon}
+                              {statusConfig.label}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium ${paymentConfig.bgColor} ${paymentConfig.textColor} whitespace-nowrap`}>
+                              {paymentConfig.label}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="text-sm font-semibold text-slate-900">{order.totalPrice.toLocaleString()} €</span>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <div className="flex justify-end gap-2">
+                              <Link to={`/orders/${order.id}`}>
+                                <button
+                                  className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 transition-all font-semibold"
+                                  title="Voir Détails"
+                                >
+                                  <ChevronRight size={16} />
+                                </button>
+                              </Link>
+                              <button
+                                onClick={() => handleOpenPrint(order)}
+                                className="p-2 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200 transition-all font-semibold"
+                                title="Imprimer BC"
+                              >
+                                <Printer size={16} />
+                              </button>
+                              <button
+                                onClick={() => openDetailsModal(order)}
+                                className="p-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 transition-all font-semibold"
+                                title="Détails"
+                              >
+                                <Info size={16} />
+                              </button>
+                              <button
+                                onClick={() => handleOpenEdit(order)}
+                                className="p-2 text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-lg border border-amber-200 transition-all font-semibold"
+                              >
+                                <Edit3 size={16} />
+                              </button>
+                              <button
+                                onClick={() => { setOrderToDelete(order); setIsDeleteModalOpen(true); }}
+                                className="p-2 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg border border-rose-200 transition-all font-semibold"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          </td>
                         </tr>
-                     </thead>
-                     <tbody className="divide-y divide-slate-100">
-                        {selectedOrderForPrint.items?.map((item, idx) => {
-                           const p = products?.find(prod => prod.id === item.productId);
-                           return (
-                              <tr key={idx} className="text-sm font-bold text-slate-800">
-                                 <td className="py-6 uppercase tracking-tight">{p?.name || 'Produit Inconnu'}</td>
-                                 <td className="py-6 text-center">{item.quantity}</td>
-                                 <td className="py-6 text-right">{item.unitPrice?.toLocaleString()} €</td>
-                                 <td className="py-6 text-right font-black">{item.totalItemPrice?.toLocaleString()} €</td>
-                              </tr>
-                           );
-                        })}
-                     </tbody>
-                  </table>
-               </div>
-
-               <div className="mt-10 flex justify-end">
-                  <div className="w-full max-w-[320px] bg-slate-50 p-8 rounded-[32px] border border-slate-100 space-y-4">
-                     <div className="flex justify-between text-xs font-bold uppercase text-slate-400"><span>Sous-total HT</span> <span>{selectedOrderForPrint.totalPrice.toLocaleString()} €</span></div>
-                     <div className="flex justify-between text-xs font-bold uppercase text-slate-400"><span>TVA (0% Export)</span> <span>0.00 €</span></div>
-                     <div className="pt-4 border-t border-slate-200 flex justify-between items-center">
-                        <span className="text-base font-black uppercase text-slate-900">Total Net TTC</span>
-                        <span className="text-3xl font-black text-blue-600 tracking-tighter">{selectedOrderForPrint.totalPrice.toLocaleString()} €</span>
-                     </div>
-                  </div>
-               </div>
-
-               {/* Footer PDF */}
-               <div className="mt-20 pt-10 border-t border-slate-100 flex justify-between items-end">
-                  <div className="space-y-4">
-                     <div className="w-24 h-24 border-2 border-dashed border-slate-200 rounded-2xl flex items-center justify-center text-slate-100">
-                        <CheckCircle size={48} className="opacity-5" />
-                     </div>
-                     <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.3em]">Signature & Cachet Officiel</p>
-                  </div>
-                  <div className="max-w-[300px] text-right">
-                     <p className="text-[10px] text-slate-400 font-bold uppercase leading-relaxed tracking-tight">
-                        Ce document confirme l'ordre de fabrication. Les délais de livraison sont applicables dès réception du paiement acompte.
-                     </p>
-                  </div>
-               </div>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </Card>
+          )}
         </div>
-      )}
+      </div>
 
-      {/* MODAL AJOUT/EDIT COMMANDE */}
+      {/* MODAL CREATE/EDIT */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
-          <Card className="w-full max-w-4xl p-8 rounded-[32px] shadow-3xl animate-in zoom-in-95 duration-300 border-none my-auto max-h-[95vh] flex flex-col">
-            <div className="flex justify-between items-center mb-8 shrink-0">
-              <div className="flex items-center gap-4">
-                 <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-500/30">
-                    <ShoppingCart size={24} />
-                 </div>
-                 <h3 className="text-xl font-black text-slate-900 tracking-tighter uppercase leading-tight">
-                    {editingOrder ? 'Modifier la Commande' : 'Nouveau Bon'}
-                 </h3>
-              </div>
-              <button onClick={handleCloseModal} className="p-2 bg-slate-100 rounded-xl text-slate-400 hover:text-slate-900 transition-all"><X size={24}/></button>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center">
+              <h2 className="text-xl font-bold text-slate-900">
+                {editingOrder ? 'Modifier la commande' : 'Nouvelle commande'}
+              </h2>
+              <button onClick={handleCloseModal} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
+                <X size={20} className="text-slate-600" />
+              </button>
             </div>
 
-            <form onSubmit={(e) => {
-              e.preventDefault();
-              const formData = new FormData(e.currentTarget);
-              saveMutation.mutate({
-                id: editingOrder?.id,
-                clientId: formData.get('clientId') as string,
-                status: formData.get('status') as OrderStatus,
-                items: items as OrderItem[],
-                totalPrice: totalOrderPrice,
-                paidAmount: editingOrder?.paidAmount || 0,
-                paymentStatus: editingOrder?.paymentStatus || PaymentStatus.NON_PAYEE,
-                orderDate: editingOrder?.orderDate || new Date().toISOString(),
-                notes: formData.get('notes') as string
-              });
-            }} className="space-y-6 overflow-y-auto pr-2 custom-scrollbar">
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Client *</label>
-                  <select name="clientId" defaultValue={editingOrder?.clientId} className="w-full border border-gray-200 h-12 rounded-xl p-3 text-sm font-bold bg-slate-50 focus:ring-4 focus:ring-blue-100 outline-none" required>
-                     <option value="">Sélectionner un partenaire</option>
-                     {clients?.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            <form onSubmit={handleSubmit} className="p-6 space-y-6">
+              {/* Client & Dates */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Client *</label>
+                  <select
+                    name="clientId"
+                    required
+                    defaultValue={editingOrder?.clientId || ''}
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none text-sm"
+                  >
+                    <option value="">Sélectionner un client</option>
+                    {clients?.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Statut Initial</label>
-                  <select name="status" defaultValue={editingOrder?.status || OrderStatus.EN_ATTENTE} className="w-full border border-gray-200 h-12 rounded-xl p-3 text-sm font-bold bg-slate-50 focus:ring-4 focus:ring-blue-100 outline-none">
-                     {Object.values(OrderStatus).map(s => <option key={s} value={s}>{STATUS_LABELS[s]?.label || s}</option>)}
-                  </select>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Date commande *</label>
+                  <input
+                    type="date"
+                    name="orderDate"
+                    required
+                    defaultValue={editingOrder?.orderDate || new Date().toISOString().split('T')[0]}
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Livraison prévue</label>
+                  <input
+                    type="date"
+                    name="deliveryDate"
+                    defaultValue={editingOrder?.deliveryDate || ''}
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none text-sm"
+                  />
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <div className="flex justify-between items-center"><h4 className="text-sm font-black text-slate-900 uppercase">Articles</h4><Button type="button" variant="secondary" onClick={addLine} className="h-10 px-4 rounded-xl text-xs font-black uppercase">+ Ajouter</Button></div>
-                <div className="space-y-3">{items.map((item) => (
-                    <div key={item.id} className="grid grid-cols-12 gap-2 p-3 bg-slate-50 rounded-2xl border border-slate-100">
-                      <div className="col-span-7 sm:col-span-6"><select className="w-full border border-gray-200 h-10 rounded-xl p-2 text-xs font-bold bg-white outline-none" value={item.productId} onChange={(e) => updateLine(item.id!, 'productId', e.target.value)} required><option value="">-- Produit --</option>{products?.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></div>
-                      <div className="col-span-3 sm:col-span-2"><input type="number" min={1} value={item.quantity} onChange={(e) => updateLine(item.id!, 'quantity', Number(e.target.value))} className="w-full h-10 border border-gray-200 rounded-xl p-2 text-xs font-bold text-center" /></div>
-                      <div className="hidden sm:flex col-span-3 items-center justify-end font-black text-slate-900 text-sm">{item.totalItemPrice?.toLocaleString()} €</div>
-                      <div className="col-span-2 sm:col-span-1 flex items-center justify-center"><button type="button" onClick={() => removeLine(item.id!)} className="text-red-400 hover:text-red-600"><Trash2 size={16}/></button></div>
+              {/* Status */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Statut</label>
+                <select
+                  name="status"
+                  defaultValue={editingOrder?.status || OrderStatus.EN_ATTENTE}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none text-sm"
+                >
+                  {Object.values(OrderStatus).map(s => <option key={s} value={s}>{STATUS_LABELS[s]?.label || s}</option>)}
+                </select>
+              </div>
+
+              {/* Items */}
+              <div>
+                <div className="flex justify-between items-center mb-3">
+                  <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider">Articles</label>
+                  <button
+                    type="button"
+                    onClick={addLine}
+                    className="flex items-center gap-1 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-semibold hover:bg-indigo-700 transition-all"
+                  >
+                    <Plus size={14} />
+                    Ajouter
+                  </button>
+                </div>
+                <div className="space-y-3">
+                  {items.map((item, idx) => (
+                    <div key={item.id} className="flex gap-2 items-start p-3 bg-slate-50 rounded-lg border border-slate-200">
+                      <div className="flex-1 grid grid-cols-1 md:grid-cols-5 gap-2">
+                        <select
+                          value={item.productId || ''}
+                          onChange={(e) => updateLine(item.id!, 'productId', e.target.value)}
+                          className="px-2 py-1.5 rounded border border-slate-200 text-sm outline-none focus:border-indigo-500"
+                        >
+                          <option value="">Produit</option>
+                          {products?.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                        </select>
+                        <input
+                          type="number"
+                          placeholder="Qté"
+                          value={item.quantity || ''}
+                          onChange={(e) => updateLine(item.id!, 'quantity', parseFloat(e.target.value) || 0)}
+                          className="px-2 py-1.5 rounded border border-slate-200 text-sm outline-none focus:border-indigo-500"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Unité"
+                          value={item.unit || ''}
+                          onChange={(e) => updateLine(item.id!, 'unit', e.target.value)}
+                          className="px-2 py-1.5 rounded border border-slate-200 text-sm outline-none focus:border-indigo-500"
+                        />
+                        <input
+                          type="number"
+                          placeholder="PU"
+                          value={item.unitPrice || ''}
+                          onChange={(e) => updateLine(item.id!, 'unitPrice', parseFloat(e.target.value) || 0)}
+                          className="px-2 py-1.5 rounded border border-slate-200 text-sm outline-none focus:border-indigo-500"
+                        />
+                        <div className="px-2 py-1.5 bg-white rounded border border-slate-200 text-sm font-semibold text-slate-700">
+                          {item.totalItemPrice?.toLocaleString() || 0} €
+                        </div>
+                      </div>
+                      {items.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeLine(item.id!)}
+                          className="p-1.5 text-rose-600 hover:bg-rose-50 rounded transition-colors"
+                        >
+                          <X size={16} />
+                        </button>
+                      )}
                     </div>
-                ))}</div>
+                  ))}
+                </div>
+                <div className="mt-3 flex justify-end">
+                  <div className="px-4 py-2 bg-indigo-50 rounded-lg">
+                    <span className="text-xs font-semibold text-indigo-900 uppercase tracking-wider mr-2">Total:</span>
+                    <span className="text-lg font-bold text-indigo-600">{totalOrderPrice.toLocaleString()} €</span>
+                  </div>
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-center">
-                 <div className="space-y-2"><label className="text-xs font-black text-slate-500 uppercase ml-1">Notes</label><textarea name="notes" defaultValue={editingOrder?.notes} className="w-full border border-gray-200 rounded-2xl p-4 text-sm font-medium bg-slate-50 focus:ring-4 focus:ring-blue-100 outline-none h-20 resize-none" /></div>
-                 <div className="p-6 bg-blue-600 rounded-[28px] text-white flex flex-col items-center justify-center"><p className="text-[10px] font-black uppercase opacity-60">Total HT</p><p className="text-3xl font-black">{totalOrderPrice.toLocaleString()} €</p></div>
+              {/* Notes */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Notes internes</label>
+                <textarea
+                  name="notes"
+                  rows={3}
+                  defaultValue={editingOrder?.notes || ''}
+                  placeholder="Instructions pour l'atelier..."
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none text-sm resize-none"
+                />
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-4 pt-4 shrink-0">
-                <Button type="button" variant="secondary" className="w-full sm:flex-1 h-12 font-black uppercase" onClick={handleCloseModal}>Annuler</Button>
-                <Button type="submit" className="w-full sm:flex-1 h-12 font-black uppercase shadow-xl shadow-blue-500/20" isLoading={saveMutation.isPending}>Valider</Button>
+              {/* Actions */}
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={handleCloseModal}
+                  className="px-4 py-2 text-slate-700 bg-white border border-slate-200 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-all"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={saveMutation.isPending}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-all disabled:opacity-50"
+                >
+                  {saveMutation.isPending ? 'Enregistrement...' : editingOrder ? 'Modifier' : 'Créer'}
+                </button>
               </div>
             </form>
-          </Card>
+          </div>
         </div>
       )}
 
-      {/* MODAL SUPPRESSION */}
+      {/* MODAL DELETE */}
       {isDeleteModalOpen && orderToDelete && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-          <Card className="w-full max-w-md p-8 rounded-[32px] border-none shadow-2xl text-center">
-             <div className="mx-auto w-16 h-16 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mb-6"><AlertTriangle size={32} /></div>
-             <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter mb-2">Supprimer l'ordre ?</h3>
-             <p className="text-slate-500 text-sm mb-8">L'ordre <span className="font-black text-slate-900">#{orderToDelete.id.slice(0,8).toUpperCase()}</span> sera retiré définitivement.</p>
-             <div className="flex gap-3">
-                <Button variant="secondary" className="flex-1 h-12 font-black uppercase text-xs" onClick={() => { setIsDeleteModalOpen(false); setOrderToDelete(null); }}>Annuler</Button>
-                <Button variant="danger" className="flex-1 h-12 font-black uppercase text-xs" onClick={() => deleteMutation.mutate(orderToDelete.id)} isLoading={deleteMutation.isPending}>Supprimer</Button>
-             </div>
-          </Card>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-rose-100 rounded-xl flex items-center justify-center">
+                <AlertTriangle size={24} className="text-rose-600" />
+              </div>
+              <h2 className="text-xl font-bold text-slate-900">Supprimer la commande</h2>
+            </div>
+            <p className="text-slate-600 mb-6">
+              Êtes-vous sûr de vouloir supprimer la commande <strong>#{orderToDelete.id.slice(0,8).toUpperCase()}</strong> ? Cette action est irréversible.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => { setIsDeleteModalOpen(false); setOrderToDelete(null); }}
+                className="px-4 py-2 text-slate-700 bg-white border border-slate-200 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-all"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={() => deleteMutation.mutate(orderToDelete.id)}
+                disabled={deleteMutation.isPending}
+                className="px-4 py-2 bg-rose-600 text-white rounded-lg text-sm font-semibold hover:bg-rose-700 transition-all disabled:opacity-50"
+              >
+                {deleteMutation.isPending ? 'Suppression...' : 'Supprimer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL PRINT */}
+      {isPrintModalOpen && selectedOrderForPrint && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center">
+              <h2 className="text-xl font-bold text-slate-900">Bon de Commande</h2>
+              <button onClick={() => setIsPrintModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
+                <X size={20} className="text-slate-600" />
+              </button>
+            </div>
+            <div className="p-8 space-y-6">
+              <div className="text-center border-b border-slate-200 pb-6">
+                <h1 className="text-3xl font-bold text-slate-900 mb-2">BON DE COMMANDE</h1>
+                <p className="text-slate-600">#{selectedOrderForPrint.id.slice(0,8).toUpperCase()}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Client</h3>
+                  <p className="font-semibold text-slate-900">{clients?.find(c => c.id === selectedOrderForPrint.clientId)?.name}</p>
+                </div>
+                <div>
+                  <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Date</h3>
+                  <p className="font-semibold text-slate-900">{new Date(selectedOrderForPrint.orderDate).toLocaleDateString('fr-FR')}</p>
+                </div>
+              </div>
+              <div>
+                <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-3">Articles</h3>
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                      <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">Produit</th>
+                      <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">Qté</th>
+                      <th className="px-3 py-2 text-right text-xs font-semibold text-slate-600">PU</th>
+                      <th className="px-3 py-2 text-right text-xs font-semibold text-slate-600">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {selectedOrderForPrint.items?.map((item, idx) => {
+                      const p = products?.find(prod => prod.id === item.productId);
+                      return (
+                        <tr key={idx}>
+                          <td className="px-3 py-2">{p?.name || 'Produit Inconnu'}</td>
+                          <td className="px-3 py-2">{item.quantity} {item.unit}</td>
+                          <td className="px-3 py-2 text-right">{item.unitPrice?.toLocaleString()} €</td>
+                          <td className="px-3 py-2 text-right font-semibold">{item.totalItemPrice?.toLocaleString()} €</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot className="border-t-2 border-slate-300">
+                    <tr>
+                      <td colSpan={3} className="px-3 py-3 text-right font-bold text-slate-900">TOTAL</td>
+                      <td className="px-3 py-3 text-right font-bold text-indigo-600 text-lg">{selectedOrderForPrint.totalPrice.toLocaleString()} €</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+              {selectedOrderForPrint.notes && (
+                <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                  <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Notes</h3>
+                  <p className="text-sm text-slate-700">{selectedOrderForPrint.notes}</p>
+                </div>
+              )}
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
+                <button
+                  onClick={() => setIsPrintModalOpen(false)}
+                  className="px-4 py-2 text-slate-700 bg-white border border-slate-200 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-all"
+                >
+                  Fermer
+                </button>
+                <button
+                  onClick={() => window.print()}
+                  className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-all"
+                >
+                  <Printer size={16} />
+                  Imprimer
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DETAILS */}
+      {isDetailsModalOpen && selectedOrder && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center">
+              <h2 className="text-xl font-bold text-slate-900">Détails de la commande</h2>
+              <button onClick={closeDetailsModal} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
+                <X size={20} className="text-slate-600" />
+              </button>
+            </div>
+            <div className="p-6 space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                  <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Référence</p>
+                  <p className="font-bold text-slate-900">#{selectedOrder.id.slice(0,8).toUpperCase()}</p>
+                </div>
+                <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                  <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Client</p>
+                  <p className="font-bold text-slate-900">{clients?.find(c => c.id === selectedOrder.clientId)?.name}</p>
+                </div>
+                <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                  <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Date commande</p>
+                  <p className="font-bold text-slate-900">{new Date(selectedOrder.orderDate).toLocaleDateString('fr-FR')}</p>
+                </div>
+                <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                  <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Livraison prévue</p>
+                  <p className="font-bold text-slate-900">{selectedOrder.deliveryDate || 'Non définie'}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 bg-indigo-50 rounded-lg border border-indigo-200">
+                  <p className="text-xs font-semibold text-indigo-900 uppercase tracking-wider mb-1">Statut</p>
+                  <p className="font-bold text-indigo-600">{STATUS_LABELS[selectedOrder.status]?.label}</p>
+                </div>
+                <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-200">
+                  <p className="text-xs font-semibold text-emerald-900 uppercase tracking-wider mb-1">Paiement</p>
+                  <p className="font-bold text-emerald-600">{PAYMENT_LABELS[selectedOrder.paymentStatus]?.label}</p>
+                </div>
+              </div>
+              <div>
+                <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-3">Articles commandés</h3>
+                <div className="space-y-2">
+                  {selectedOrder.items?.map((item, idx) => {
+                    const p = products?.find(prod => prod.id === item.productId);
+                    return (
+                      <div key={idx} className="flex justify-between items-center p-3 bg-slate-50 rounded-lg border border-slate-200">
+                        <div>
+                          <p className="font-semibold text-slate-900">{p?.name || 'Produit Inconnu'}</p>
+                          <p className="text-xs text-slate-600">{item.quantity} {item.unit} × {item.unitPrice?.toLocaleString()} €</p>
+                        </div>
+                        <p className="font-bold text-slate-900">{item.totalItemPrice?.toLocaleString()} €</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="p-4 bg-indigo-600 rounded-lg text-white">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-semibold uppercase tracking-wider">Montant total</span>
+                  <span className="text-2xl font-bold">{selectedOrder.totalPrice.toLocaleString()} €</span>
+                </div>
+              </div>
+              {selectedOrder.notes && (
+                <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
+                  <h3 className="text-xs font-semibold text-amber-900 uppercase tracking-wider mb-2">Notes internes</h3>
+                  <p className="text-sm text-amber-900">{selectedOrder.notes}</p>
+                </div>
+              )}
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
+                <button
+                  onClick={closeDetailsModal}
+                  className="px-4 py-2 text-slate-700 bg-white border border-slate-200 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-all"
+                >
+                  Fermer
+                </button>
+                <Link to={`/orders/${selectedOrder.id}`}>
+                  <button className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-all">
+                    <FileText size={16} />
+                    Voir détails complets
+                  </button>
+                </Link>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
