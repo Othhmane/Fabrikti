@@ -26,7 +26,7 @@ const App: React.FC = () => {
         <Route path="/login" element={<Login />} />
 
         {/* PRIVATE */}
-        <Route path="/" element={<AuthGuard><Layout children={<Dashboard />} /></AuthGuard>} />
+       {/* PRIVATE <Route path="/" element={<AuthGuard><Layout children={<Dashboard />} /></AuthGuard>} /> */} 
         <Route path={APP_ROUTES.CLIENTS} element={<AuthGuard><Layout children={<ClientList />} /></AuthGuard>} />
         <Route path="/clients/:id/history" element={<AuthGuard><Layout children={<ClientHistory />} /></AuthGuard>} />
         <Route path={APP_ROUTES.PRODUCTS} element={<AuthGuard><Layout children={<ProductManagement />} /></AuthGuard>} />
@@ -40,7 +40,7 @@ const App: React.FC = () => {
         <Route path={APP_ROUTES.THEME} element={<AuthGuard><Layout children={<ThemeSettings />} /></AuthGuard>} />
         
         {/* FALLBACK */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<Navigate to={APP_ROUTES.CLIENTS} replace />} />
       </Routes>
     </Router>
   );
