@@ -29,13 +29,15 @@ const storage = {
 const initDB = () => {
   if (!localStorage.getItem('fabrikti_clients')) {
     storage.write('clients', [
-      { id: 'c1', name: 'OrthoTech Solutions', email: 'contact@orthotech.com', phone: '0144556677', address: '12 Rue de la Paix, Lyon', providedProducts: [] },
+      { id: 'c1', name: 'Kamel Lazio', email: 'lazio@lazio.com', phone: '0550805780', address: '12 Rue de la mouloudia froucha', providedProducts: [] },
       { id: 'c2', name: 'SportPerformance SA', email: 'orders@sportperf.fr', phone: '0450607080', address: 'ZA les montagnes, Annecy', providedProducts: [] }
     ]);
     storage.write('materials', [
-      { id: 'm1', name: 'Mousse EVA 40 Shore', unit: 'm2', stock: 150, paymentStatus: PaymentStatus.PAYEE, pricePerUnit: 25, supplierId: 's1' },
-      { id: 'm2', name: 'Résine Thermoplastique', unit: 'kg', stock: 50, paymentStatus: PaymentStatus.PAYEE, pricePerUnit: 45, supplierId: 's1' },
-      { id: 'm3', name: 'Cuir Doublure Porc', unit: 'm2', stock: 80, paymentStatus: PaymentStatus.PARTIEL, pricePerUnit: 18, supplierId: 's1' }
+      { id: 'm1', name: 'Sendem', unit: 'm2', stock: 80, paymentStatus: PaymentStatus.PARTIEL, pricePerUnit: 18, supplierId: 's1' },
+      { id: 'm2', name: 'Colle IUY7U', unit: 'kg', stock: 80, paymentStatus: PaymentStatus.PARTIEL, pricePerUnit: 18, supplierId: 's1' },
+      { id: 'm3', name: 'Mousse EVA 40 Shore', unit: 'm2', stock: 150, paymentStatus: PaymentStatus.PAYEE, pricePerUnit: 25, supplierId: 's1' },
+      { id: 'm4', name: 'Résine Thermoplastique', unit: 'kg', stock: 50, paymentStatus: PaymentStatus.PAYEE, pricePerUnit: 45, supplierId: 's1' },
+      { id: 'm5', name: 'Cuir Doublure', unit: 'm2', stock: 80, paymentStatus: PaymentStatus.PARTIEL, pricePerUnit: 18, supplierId: 's1' },
     ]);
     storage.write('products', [
       { id: 'p1', name: 'Semelle Sport Gel G1', category: 'Semelle', unit: 'paire', pricePerUnit: 12.50, consumptionFormula: [{ materialId: 'm1', quantity: 0.05 }, { materialId: 'm2', quantity: 0.1 }] },
