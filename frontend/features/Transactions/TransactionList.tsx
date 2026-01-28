@@ -386,7 +386,7 @@ export const TransactionList: React.FC = () => {
                 <span className="text-sm font-semibold text-slate-600">Solde Net</span>
               </div>
               <p className={`text-3xl font-bold ${totals.balance >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                {totals.balance.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €
+                {totals.balance.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} DA
               </p>
               <p className="text-xs text-slate-500 mt-2">
                 {totals.balance >= 0 ? '↗ Positif' : '↘ Négatif'}
@@ -401,7 +401,7 @@ export const TransactionList: React.FC = () => {
                 <span className="text-sm font-semibold text-emerald-900">Encaissements</span>
               </div>
               <p className="text-3xl font-bold text-emerald-600">
-                +{totals.income.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €
+                +{totals.income.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} DA
               </p>
               <p className="text-xs text-emerald-700 mt-2">
                 {filteredTransactions.filter(t => t.type === TransactionType.INCOME).length} opération(s)
@@ -416,7 +416,7 @@ export const TransactionList: React.FC = () => {
                 <span className="text-sm font-semibold text-rose-900">Décaissements</span>
               </div>
               <p className="text-3xl font-bold text-rose-600">
-                -{totals.expense.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €
+                -{totals.expense.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} DA
               </p>
               <p className="text-xs text-rose-700 mt-2">
                 {filteredTransactions.filter(t => t.type === TransactionType.EXPENSE).length} opération(s)
@@ -566,7 +566,7 @@ export const TransactionList: React.FC = () => {
 
                 {/* Montant min */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Montant min (€)</label>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Montant min (DA)</label>
                   <input
                     type="number"
                     step="0.01"
@@ -579,7 +579,7 @@ export const TransactionList: React.FC = () => {
 
                 {/* Montant max */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Montant max (€)</label>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Montant max (DA)</label>
                   <input
                     type="number"
                     step="0.01"
@@ -696,7 +696,7 @@ export const TransactionList: React.FC = () => {
                           <td className="px-6 py-4 text-right">
                             <p className={`text-sm font-semibold ${t.type === TransactionType.INCOME ? 'text-emerald-600' : 'text-rose-600'}`}>
                               {t.type === TransactionType.INCOME ? '+' : '-'}
-                              {t.amount.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €
+                              {t.amount.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} DA
                             </p>
                           </td>
                           <td className="px-6 py-4 text-right">
@@ -845,7 +845,7 @@ export const TransactionList: React.FC = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">
-                        Montant (€) *
+                        Montant (DA) *
                       </label>
                       <div className="relative">
                         <DollarSign size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -968,7 +968,7 @@ export const TransactionList: React.FC = () => {
                 </span>
                 <p className={`text-base font-bold ${transactionToDelete.type === TransactionType.INCOME ? 'text-emerald-600' : 'text-rose-600'}`}>
                   {transactionToDelete.type === TransactionType.INCOME ? '+' : '-'}
-                  {transactionToDelete.amount.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €
+                  {transactionToDelete.amount.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} DA
                 </p>
               </div>
             </div>

@@ -317,7 +317,7 @@ export const MachineList: React.FC = () => {
                     <input
                       name="cost"
                       type="number"
-                      placeholder="Coût (€)"
+                      placeholder="Coût (DA)"
                       className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                     />
                   </div>
@@ -362,7 +362,7 @@ export const MachineList: React.FC = () => {
                       </div>
                       {inv.cost ? (
                         <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-bold rounded-full">
-                          {inv.cost} €
+                          {inv.cost} DA
                         </span>
                       ) : null}
                     </div>

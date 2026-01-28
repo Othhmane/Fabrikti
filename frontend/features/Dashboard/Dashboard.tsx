@@ -110,7 +110,7 @@ export const Dashboard: React.FC = () => {
               </div>
               <div>
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Trésorerie</p>
-                <p className="text-2xl font-bold text-slate-900">{financialSummary.balance.toLocaleString()} €</p>
+                <p className="text-2xl font-bold text-slate-900">{financialSummary.balance.toLocaleString()} DA</p>
               </div>
             </div>
             <div className="flex items-center gap-2 text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg w-fit">
@@ -189,7 +189,7 @@ export const Dashboard: React.FC = () => {
                     </div>
                   </div>
                   <p className={`text-sm font-bold ${t.type === TransactionType.INCOME ? 'text-emerald-600' : 'text-rose-600'}`}>
-                    {t.type === TransactionType.INCOME ? '+' : '-'}{t.amount.toLocaleString()} €
+                    {t.type === TransactionType.INCOME ? '+' : '-'}{t.amount.toLocaleString()} DA
                   </p>
                 </div>
               ))}

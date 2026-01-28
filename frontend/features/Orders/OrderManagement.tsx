@@ -275,7 +275,7 @@ export const OrderManagement: React.FC = () => {
                 </div>
                 <span className="text-sm font-semibold text-indigo-900">Montant Total</span>
               </div>
-              <p className="text-3xl font-bold text-indigo-600">{stats.totalAmount.toLocaleString()} €</p>
+              <p className="text-3xl font-bold text-indigo-600">{stats.totalAmount.toLocaleString()} DA</p>
               <p className="text-xs text-indigo-700 mt-2">Chiffre d'affaires</p>
             </div>
           </div>
@@ -424,7 +424,7 @@ export const OrderManagement: React.FC = () => {
                             </span>
                           </td>
                           <td className="px-6 py-4">
-                            <span className="text-sm font-semibold text-slate-900">{order.totalPrice.toLocaleString()} €</span>
+                            <span className="text-sm font-semibold text-slate-900">{order.totalPrice.toLocaleString()} DA</span>
                           </td>
                           <td className="px-6 py-4 text-right">
                             <div className="flex justify-end gap-2">
@@ -583,7 +583,7 @@ export const OrderManagement: React.FC = () => {
                           className="px-2 py-1.5 rounded border border-slate-200 text-sm outline-none focus:border-indigo-500"
                         />
                         <div className="px-2 py-1.5 bg-white rounded border border-slate-200 text-sm font-semibold text-slate-700">
-                          {item.totalItemPrice?.toLocaleString() || 0} €
+                          {item.totalItemPrice?.toLocaleString() || 0} DA
                         </div>
                       </div>
                       {items.length > 1 && (
@@ -601,7 +601,7 @@ export const OrderManagement: React.FC = () => {
                 <div className="mt-3 flex justify-end">
                   <div className="px-4 py-2 bg-indigo-50 rounded-lg">
                     <span className="text-xs font-semibold text-indigo-900 uppercase tracking-wider mr-2">Total:</span>
-                    <span className="text-lg font-bold text-indigo-600">{totalOrderPrice.toLocaleString()} €</span>
+                    <span className="text-lg font-bold text-indigo-600">{totalOrderPrice.toLocaleString()} DA</span>
                   </div>
                 </div>
               </div>
@@ -715,8 +715,8 @@ export const OrderManagement: React.FC = () => {
                         <tr key={idx}>
                           <td className="px-3 py-2">{p?.name || 'Produit Inconnu'}</td>
                           <td className="px-3 py-2">{item.quantity} {item.unit}</td>
-                          <td className="px-3 py-2 text-right">{item.unitPrice?.toLocaleString()} €</td>
-                          <td className="px-3 py-2 text-right font-semibold">{item.totalItemPrice?.toLocaleString()} €</td>
+                          <td className="px-3 py-2 text-right">{item.unitPrice?.toLocaleString()} DA</td>
+                          <td className="px-3 py-2 text-right font-semibold">{item.totalItemPrice?.toLocaleString()} DA</td>
                         </tr>
                       );
                     })}
@@ -724,7 +724,7 @@ export const OrderManagement: React.FC = () => {
                   <tfoot className="border-t-2 border-slate-300">
                     <tr>
                       <td colSpan={3} className="px-3 py-3 text-right font-bold text-slate-900">TOTAL</td>
-                      <td className="px-3 py-3 text-right font-bold text-indigo-600 text-lg">{selectedOrderForPrint.totalPrice.toLocaleString()} €</td>
+                      <td className="px-3 py-3 text-right font-bold text-indigo-600 text-lg">{selectedOrderForPrint.totalPrice.toLocaleString()} DA</td>
                     </tr>
                   </tfoot>
                 </table>
@@ -803,9 +803,9 @@ export const OrderManagement: React.FC = () => {
                       <div key={idx} className="flex justify-between items-center p-3 bg-slate-50 rounded-lg border border-slate-200">
                         <div>
                           <p className="font-semibold text-slate-900">{p?.name || 'Produit Inconnu'}</p>
-                          <p className="text-xs text-slate-600">{item.quantity} {item.unit} × {item.unitPrice?.toLocaleString()} €</p>
+                          <p className="text-xs text-slate-600">{item.quantity} {item.unit} × {item.unitPrice?.toLocaleString()} DA</p>
                         </div>
-                        <p className="font-bold text-slate-900">{item.totalItemPrice?.toLocaleString()} €</p>
+                        <p className="font-bold text-slate-900">{item.totalItemPrice?.toLocaleString()} DA</p>
                       </div>
                     );
                   })}
@@ -814,7 +814,7 @@ export const OrderManagement: React.FC = () => {
               <div className="p-4 bg-indigo-600 rounded-lg text-white">
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-semibold uppercase tracking-wider">Montant total</span>
-                  <span className="text-2xl font-bold">{selectedOrder.totalPrice.toLocaleString()} €</span>
+                  <span className="text-2xl font-bold">{selectedOrder.totalPrice.toLocaleString()} DA</span>
                 </div>
               </div>
               {selectedOrder.notes && (

@@ -191,8 +191,8 @@ export const RawMaterialList: React.FC = () => {
                         <span className="text-xs font-medium">{material.stock} {material.unit}</span>
                       </div>
                       <div className="flex items-center gap-3 p-2 bg-amber-50 rounded-lg text-slate-700">
-                        <span className="text-amber-600 shrink-0 font-bold text-xs">€</span>
-                        <span className="truncate text-xs font-medium">{material.pricePerUnit} € / {material.unit}</span>
+                        <span className="text-amber-600 shrink-0 font-bold text-xs">DA</span>
+                        <span className="truncate text-xs font-medium">{material.pricePerUnit} DA / {material.unit}</span>
                       </div>
                     </div>
 
@@ -285,7 +285,7 @@ export const RawMaterialList: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Prix unitaire (€)</label>
+                    <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Prix unitaire (DA)</label>
                     <input
                       type="number"
                       step="0.01"

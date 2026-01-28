@@ -202,9 +202,9 @@ export const OrderDetails: React.FC = () => {
                           }}>
                             <td style={{ padding: '0.75rem 1rem' }}>{p?.name || 'Produit Inconnu'}</td>
                             <td style={{ padding: '0.75rem 1rem' }}>{item.quantity} {item.unit}</td>
-                            <td style={{ padding: '0.75rem 1rem' }}>{item.unitPrice?.toLocaleString()} €</td>
+                            <td style={{ padding: '0.75rem 1rem' }}>{item.unitPrice?.toLocaleString()} DA</td>
                             <td style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: '600' }}>
-                              {item.totalItemPrice?.toLocaleString()} €
+                              {item.totalItemPrice?.toLocaleString()} DA
                             </td>
                           </tr>
                         );
@@ -215,7 +215,7 @@ export const OrderDetails: React.FC = () => {
                             <td style={{ padding: '0.75rem 1rem' }}>0</td>
                             <td style={{ padding: '0.75rem 1rem' }}>--</td>
                             <td style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: '600' }}>
-                              {order.totalPrice.toLocaleString()} €
+                              {order.totalPrice.toLocaleString()} DA
                             </td>
                          </tr>
                       )}
@@ -239,7 +239,7 @@ export const OrderDetails: React.FC = () => {
                     Montant total
                   </p>
                   <p style={{ fontSize: '1.5rem', fontWeight: '600' }}>
-                    {order.totalPrice.toLocaleString()} €
+                    {order.totalPrice.toLocaleString()} DA
                   </p>
                </div>
                <div>
@@ -247,7 +247,7 @@ export const OrderDetails: React.FC = () => {
                     Déjà encaissé
                   </p>
                   <p style={{ fontSize: '1.5rem', fontWeight: '600', color: '#10B981' }}>
-                    {order.paidAmount?.toLocaleString() || 0} €
+                    {order.paidAmount?.toLocaleString() || 0} DA
                   </p>
                </div>
                <div>
@@ -259,7 +259,7 @@ export const OrderDetails: React.FC = () => {
                     fontWeight: '600',
                     color: 'rgb(30, 64, 175)',
                   }}>
-                    {remaining.toLocaleString()} €
+                    {remaining.toLocaleString()} DA
                   </p>
                </div>
             </div>
@@ -331,7 +331,7 @@ export const OrderDetails: React.FC = () => {
                     fontWeight: '600',
                     color: t.type === TransactionType.INCOME ? '#10B981' : '#EF4444'
                   }}>
-                    {t.type === TransactionType.INCOME ? '+' : '-'}{t.amount.toLocaleString()} €
+                    {t.type === TransactionType.INCOME ? '+' : '-'}{t.amount.toLocaleString()} DA
                   </p>
                 </div>
               ))}

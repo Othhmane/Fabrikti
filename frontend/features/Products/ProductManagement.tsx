@@ -191,7 +191,7 @@ export const ProductManagement: React.FC = () => {
                   </div>
                   <div className="flex items-center gap-3 p-2 bg-emerald-50 rounded-lg text-slate-700">
                     <DollarSign size={16} className="text-emerald-600 shrink-0" />
-                    <span className="text-xs font-medium">{product.pricePerUnit}€ / {product.unit}</span>
+                    <span className="text-xs font-medium">{product.pricePerUnit}DA / {product.unit}</span>
                   </div>
                   <div className="flex items-center gap-3 p-2 bg-amber-50 rounded-lg text-slate-700">
                     <Database size={16} className="text-amber-600 shrink-0" />
@@ -276,7 +276,7 @@ export const ProductManagement: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Prix unitaire (€)</label>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Prix unitaire (DA)</label>
                   <input
                     type="number"
                     step="0.01"
@@ -425,7 +425,7 @@ export const ProductManagement: React.FC = () => {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-xs text-slate-600">Prix unitaire</span>
-                      <span className="text-xs font-medium text-slate-900">{selectedProduct.pricePerUnit}€</span>
+                      <span className="text-xs font-medium text-slate-900">{selectedProduct.pricePerUnit}DA</span>
                     </div>
                   </div>
                 </div>

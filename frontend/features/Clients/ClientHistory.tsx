@@ -151,7 +151,7 @@ export const ClientHistory: React.FC = () => {
             </div>
           </div>
           <p className="text-xs text-gray-500 mb-1">Total Facturé HT</p>
-          <p className="text-2xl font-semibold text-gray-900">{stats.totalInvoiced.toLocaleString()} €</p>
+          <p className="text-2xl font-semibold text-gray-900">{stats.totalInvoiced.toLocaleString()} DA</p>
         </div>
 
         {/* Encaissements */}
@@ -162,11 +162,11 @@ export const ClientHistory: React.FC = () => {
             </div>
             <div>
               <p className="text-xs text-emerald-600">Réglé</p>
-              <p className="text-sm font-semibold text-emerald-600">+{stats.totalIncomes.toLocaleString()} €</p>
+              <p className="text-sm font-semibold text-emerald-600">+{stats.totalIncomes.toLocaleString()} DA</p>
             </div>
           </div>
           <p className="text-xs text-gray-500 mb-1">Total Payé Net</p>
-          <p className="text-2xl font-semibold text-emerald-600">{stats.netPaid.toLocaleString()} €</p>
+          <p className="text-2xl font-semibold text-emerald-600">{stats.netPaid.toLocaleString()} DA</p>
         </div>
 
         {/* Solde Client */}
@@ -183,7 +183,7 @@ export const ClientHistory: React.FC = () => {
           </div>
           <p className="text-xs text-white/80 mb-1">Solde du Compte</p>
           <p className="text-2xl font-semibold text-white">
-            {stats.balance > 0 ? '+' : ''}{stats.balance.toLocaleString()} €
+            {stats.balance > 0 ? '+' : ''}{stats.balance.toLocaleString()} DA
           </p>
         </div>
 
@@ -198,7 +198,7 @@ export const ClientHistory: React.FC = () => {
             </div>
           </div>
           <p className="text-xs text-gray-500 mb-1">Panier Moyen</p>
-          <p className="text-2xl font-semibold text-gray-900">{Math.round(stats.averageOrder).toLocaleString()} €</p>
+          <p className="text-2xl font-semibold text-gray-900">{Math.round(stats.averageOrder).toLocaleString()} DA</p>
         </div>
       </div>
 
@@ -274,7 +274,7 @@ export const ClientHistory: React.FC = () => {
                     {/* Montant */}
                     <div className="text-right">
                       <p className={`text-lg font-semibold ${isOrder ? 'text-gray-900' : (item.type === TransactionType.INCOME ? 'text-emerald-600' : 'text-rose-600')}`}>
-                        {isOrder ? '' : (item.type === TransactionType.INCOME ? '+' : '-')}{item.amount || item.totalPrice} €
+                        {isOrder ? '' : (item.type === TransactionType.INCOME ? '+' : '-')}{item.amount || item.totalPrice} DA
                       </p>
                       {isOrder && (
                         <Link to={`/orders/${item.id}`}>
