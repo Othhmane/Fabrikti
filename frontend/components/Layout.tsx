@@ -79,10 +79,9 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           {/* User Section Sidebar (Bottom) */}
           <div className="p-4 mt-4 border-t border-slate-800/50">
              <div className="flex items-center gap-3 px-4 py-4 mb-4 bg-slate-900/40 rounded-2xl border border-slate-800/30">
-                <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center overflow-hidden border border-slate-700">
-                  <UserIcon size={20} className="text-slate-500" />
-                  {/* <img src="URL_AVATAR" className="w-full h-full object-cover" /> */}
-                </div>
+              <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center overflow-hidden border border-slate-700">
+                <img src="/features/images/tchouna.png" alt="User Avatar" className="w-full h-full object-cover" />
+              </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-bold text-white truncate">{user?.name || 'Tchouna'}</p>
                   <p className="text-[10px] text-slate-500 font-bold uppercase truncate tracking-wider">Super Administrateur</p>
@@ -133,9 +132,8 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">En ligne</p>
                 </div>
               </div>
-              <div className={`w-12 h-12 rounded-2xl bg-${themeColor}-100 flex items-center justify-center text-${themeColor}-700 font-black border-2 border-white shadow-xl shadow-slate-200 overflow-hidden`}>
-                <UserIcon size={24} />
-                {/* <img src="URL_AVATAR" className="w-full h-full object-cover" /> */}
+              <div className={`w-12 h-12 rounded-2xl bg-${themeColor}-100 flex items-center justify-center font-black border-2 border-white shadow-xl shadow-slate-200 overflow-hidden`}>
+                <img src="/features/images/tchouna.png" alt="User Avatar" className="w-full h-full object-cover" />
               </div>
             </div>
           </div>
