@@ -11,8 +11,8 @@ import {
 } from 'lucide-react';
 import { ProductConsumption } from '../../types';
 
-const CATEGORIES = ['Semelle', 'Semelle de propreté', 'Talon', 'Accessoire', 'Autre'];
-const UNITS = ['paire', 'unité', 'm²', 'cm', 'kg', 'litre'];
+const CATEGORIES = ['Semelle', 'Semelle Neo','Semelle injecté ', 'Première'];
+const UNITS = ['paire', 'feuille', 'unité', 'm²', 'cm', 'kg', 'litre'];
 
 const productSchema = z.object({
   name: z.string().min(2, "Le nom doit contenir au moins 2 caractères"),

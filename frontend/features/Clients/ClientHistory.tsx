@@ -4,12 +4,14 @@ import { useQuery } from '@tanstack/react-query';
 import { FabriktiService } from '../../api/services';
 import { Card, Badge, Button, Input } from '../../components/UI';
 import { TransactionType, PaymentStatus, Order, Transaction } from '../../types';
+import GenerateClientPdf from '../../components/GenerateClientPdf';
+
 import { 
   ShoppingBag, ArrowLeft, ArrowRightLeft, Clock, Calendar, 
   DollarSign, Package, CreditCard, TrendingUp, AlertCircle, 
   CheckCircle2, Info, Filter, MessageSquare, User, 
   ChevronRight, ArrowUpCircle, ArrowDownCircle, History,
-  Plus, Trash2, Send
+  Plus, Trash2, Send, Printer
 } from 'lucide-react';
 
 interface ClientNote {
@@ -21,6 +23,8 @@ interface ClientNote {
 export const ClientHistory: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [filterType, setFilterType] = useState<'all' | 'orders' | 'transactions'>('all');
+  const [dateFrom, setDateFrom] = useState<string>('');
+  const [dateTo, setDateTo] = useState<string>('');
   
   const [notes, setNotes] = useState<ClientNote[]>([]);
   const [newNoteText, setNewNoteText] = useState('');
@@ -53,6 +57,10 @@ export const ClientHistory: React.FC = () => {
       const updatedNotes = notes.filter(n => n.id !== noteId);
       saveNotesToStorage(updatedNotes);
     }
+  };
+
+  const handlePrintPdf = () => {
+    window.print();
   };
 
   const { data: clients } = useQuery({ queryKey: ['clients'], queryFn: FabriktiService.getClients });
@@ -101,6 +109,21 @@ export const ClientHistory: React.FC = () => {
     });
   }, [clientOrders, clientTransactions]);
 
+  const filteredTimeline = useMemo(() => {
+    return timeline.filter(item => {
+      // Filtre type
+      if (filterType === 'orders' && item._type !== 'ORDER') return false;
+      if (filterType === 'transactions' && item._type !== 'TRANSACTION') return false;
+
+      // Filtre date
+      const itemDate = new Date(item.orderDate || item.date);
+      if (dateFrom && itemDate < new Date(dateFrom)) return false;
+      if (dateTo && itemDate > new Date(dateTo)) return false;
+
+      return true;
+    });
+  }, [timeline, filterType, dateFrom, dateTo]);
+
   if (!client) return (
     <div className="p-20 text-center">
       <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -112,7 +135,7 @@ export const ClientHistory: React.FC = () => {
   );
 
   return (
-    <div className="space-y-6">
+    <div id="client-history-print-area" className="space-y-6">
       
       {/* Titre principal */}
       <div className="bg-white border border-gray-100 rounded-lg p-6">
@@ -130,9 +153,23 @@ export const ClientHistory: React.FC = () => {
               <p className="text-sm text-gray-500 mt-0.5">Historique du client</p>
             </div>
           </div>
-          <Badge color={stats.balance < 0 ? 'red' : 'green'}>
-            {stats.balance < 0 ? 'En dette' : 'Solde à jour'}
-          </Badge>
+          <div className="flex items-center gap-3">
+            <Badge color={stats.balance < 0 ? 'red' : 'green'}>
+              {stats.balance < 0 ? 'En dette' : 'Solde à jour'}
+            </Badge>
+            <GenerateClientPdf
+              client={{
+                name: client.name,
+                email: client.email,
+                phone: client.phone,
+                address: client.address,
+                ordersCount: clientOrders.length,
+                totalInvoiced: stats.totalInvoiced,
+                balance: stats.balance,
+              }}
+              timeline={filteredTimeline}
+            />
+          </div>
         </div>
       </div>
 
@@ -206,10 +243,12 @@ export const ClientHistory: React.FC = () => {
         
         {/* Timeline */}
         <div className="lg:col-span-2 space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-4">
             <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
               <History size={18} className="text-indigo-600" /> Journal d'Activité
             </h3>
+
+            {/* FILTRE TYPE */}
             <div className="flex gap-2">
               {['all', 'orders', 'transactions'].map(t => (
                 <button 
@@ -223,16 +262,41 @@ export const ClientHistory: React.FC = () => {
                 </button>
               ))}
             </div>
+
+            {/* FILTRE DATE */}
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={e => setDateFrom(e.target.value)}
+                className="border border-gray-300 rounded px-2 py-1 text-xs"
+                max={dateTo || undefined}
+              />
+              <input
+                type="date"
+                value={dateTo}
+                onChange={e => setDateTo(e.target.value)}
+                className="border border-gray-300 rounded px-2 py-1 text-xs"
+                min={dateFrom || undefined}
+              />
+              <button
+                onClick={() => { setDateFrom(''); setDateTo(''); }}
+                className="inline-block px-2 py-1.5 bg-indigo-600 text-white text-xs rounded"
+                title="Réinitialiser les dates"
+              >
+                Réinitialiser
+              </button>
+            </div>
           </div>
 
           <div className="space-y-3">
-            {timeline
-              .filter(item => {
-                if (filterType === 'orders') return item._type === 'ORDER';
-                if (filterType === 'transactions') return item._type === 'TRANSACTION';
-                return true;
-              })
-              .map((item, idx) => {
+            {filteredTimeline.length === 0 && (
+              <div className="py-16 text-center bg-white rounded-lg border border-dashed border-gray-200">
+                <p className="text-gray-400 text-sm">Aucun historique disponible</p>
+              </div>
+            )}
+
+            {filteredTimeline.map((item, idx) => {
               const isOrder = item._type === 'ORDER';
               
               return (
@@ -278,7 +342,7 @@ export const ClientHistory: React.FC = () => {
                       </p>
                       {isOrder && (
                         <Link to={`/orders/${item.id}`}>
-                          <button className="flex items-center gap-1 text-xs text-indigo-600 hover:underline mt-1">
+                          <button className="flex items-center gap-1 text-xs text-indigo-600 hover:underline mt-1 print:hidden">
                             Détails <ChevronRight size={12}/>
                           </button>
                         </Link>
@@ -288,12 +352,6 @@ export const ClientHistory: React.FC = () => {
                 </div>
               );
             })}
-            
-            {timeline.length === 0 && (
-              <div className="py-16 text-center bg-white rounded-lg border border-dashed border-gray-200">
-                <p className="text-gray-400 text-sm">Aucun historique disponible</p>
-              </div>
-            )}
           </div>
         </div>
 
@@ -307,7 +365,7 @@ export const ClientHistory: React.FC = () => {
             </h3>
             
             {/* Saisie */}
-            <div className="relative mb-4">
+            <div className="relative mb-4 print:hidden">
               <textarea 
                 className="w-full h-24 p-3 bg-gray-50 rounded-lg border border-gray-200 text-sm text-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-300 outline-none resize-none transition-all"
                 placeholder="Ajouter une note..."
@@ -341,7 +399,7 @@ export const ClientHistory: React.FC = () => {
                       </span>
                       <button 
                         onClick={() => handleDeleteNote(note.id)}
-                        className="p-1 text-gray-300 hover:text-rose-500 transition-all"
+                        className="p-1 text-gray-300 hover:text-rose-500 transition-all print:hidden"
                       >
                         <Trash2 size={12} />
                       </button>

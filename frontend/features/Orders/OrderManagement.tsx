@@ -428,6 +428,8 @@ export const OrderManagement: React.FC = () => {
                           </td>
                           <td className="px-6 py-4 text-right">
                             <div className="flex justify-end gap-2">
+                              {/*  
+                              
                               <Link to={`/orders/${order.id}`}>
                                 <button
                                   className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 transition-all font-semibold"
@@ -436,6 +438,7 @@ export const OrderManagement: React.FC = () => {
                                   <ChevronRight size={16} />
                                 </button>
                               </Link>
+                              */}
                               <button
                                 onClick={() => handleOpenPrint(order)}
                                 className="p-2 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200 transition-all font-semibold"

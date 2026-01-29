@@ -871,9 +871,7 @@ export const TransactionList: React.FC = () => {
                         className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
                         required
                       >
-                        <option value="Virement bancaire">🏦 Virement bancaire</option>
-                        <option value="Carte bancaire">💳 Carte bancaire</option>
-                        <option value="Chèque">📝 Chèque</option>
+
                         <option value="Espèces">💵 Espèces</option>
                       </select>
                     </div>
