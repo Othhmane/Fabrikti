@@ -52,10 +52,10 @@ export const Login: React.FC = () => {
         <div className="text-center mb-8">
           <div className="relative inline-block mb-6">
             <div className="w-20 h-20 bg-blue-600 rounded-3xl flex items-center justify-center text-white text-4xl font-black shadow-lg shadow-blue-200 ring-4 ring-white">
-                <img src="/features/images/tchouna.png" alt="User Avatar" className="w-full h-full object-cover" />
-            </div>
-            <div className="absolute bg-indigo-600 -bottom-2 -right-2 w-8 h-8 bg-white rounded-full border-2 border-slate-50 flex items-center justify-center text-slate-300 shadow-sm overflow-hidden">
-                F
+F             
+ </div>
+            <div className="absolute bg-gray-150 -bottom-2 -right-2 w-8 h-8 bg-white rounded-full border-2 border-slate-50 flex items-center justify-center text-slate-300 shadow-sm overflow-hidden">
+                <UserIcon size={16} />
             </div>
           </div>
           <h1 className="text-3xl font-black text-slate-900 tracking-tight">Fabrikti</h1>

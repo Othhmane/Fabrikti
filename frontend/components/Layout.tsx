@@ -80,7 +80,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           <div className="p-4 mt-4 border-t border-slate-800/50">
              <div className="flex items-center gap-3 px-4 py-4 mb-4 bg-slate-900/40 rounded-2xl border border-slate-800/30">
               <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center overflow-hidden border border-slate-700">
-                <img src="/features/images/tchouna.png" alt="User Avatar" className="w-full h-full object-cover" />
+                  <UserIcon size={20} className="text-slate-400" /> 
               </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-bold text-white truncate">{user?.name || 'Tchouna'}</p>
@@ -133,7 +133,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                 </div>
               </div>
               <div className={`w-12 h-12 rounded-2xl bg-${themeColor}-100 flex items-center justify-center font-black border-2 border-white shadow-xl shadow-slate-200 overflow-hidden`}>
-                <img src="/features/images/tchouna.png" alt="User Avatar" className="w-full h-full object-cover" />
+                <UserIcon size={24} className={`text-${themeColor}-600`} />
               </div>
             </div>
           </div>
