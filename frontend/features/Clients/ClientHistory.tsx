@@ -59,9 +59,7 @@ export const ClientHistory: React.FC = () => {
     }
   };
 
-  const handlePrintPdf = () => {
-    window.print();
-  };
+
 
   const { data: clients } = useQuery({ queryKey: ['clients'], queryFn: FabriktiService.getClients });
   const { data: orders } = useQuery({ queryKey: ['orders'], queryFn: FabriktiService.getOrders });

@@ -228,7 +228,7 @@ const GenerateClientPdf: React.FC<Props> = ({ client, timeline }) => {
     <>
       <button
         onClick={handlePreview}
-        className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 text-xs font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 hover:text-indigo-700 transition-all"
+        className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-indigo-200 text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-100 hover:text-indigo-800 transition-all"
       >
         <Printer size={14} />
         Exporter PDF
