@@ -177,10 +177,12 @@ export const ClientList: React.FC = () => {
 
                   <h3 className="text-base font-bold text-slate-900 mb-3">{client.name}</h3>
                   <div className="space-y-2.5 mb-4 text-sm">
+                    {/*
                     <div className="bg-blue-50 flex items-center gap-3 p-2 bg-slate-50 rounded-lg text-slate-700 border border-slate-100">
                       <Mail size={14} className="text-slate-400 shrink-0" />
                       <span className="truncate text-xs font-medium">{client.email}</span>
                     </div>
+                    */}
                     <div className="bg-green-50 flex items-center gap-3 p-2 bg-slate-50 rounded-lg text-slate-700 border border-slate-100">
                       <Phone size={14} className="text-slate-400 shrink-0" />
                       <span className="text-xs font-medium">{client.phone}</span>
