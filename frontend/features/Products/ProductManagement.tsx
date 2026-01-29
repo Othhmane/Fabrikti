@@ -167,7 +167,7 @@ export const ProductManagement: React.FC = () => {
                   <div className="flex gap-2 transition-opacity">
                     <button
                       onClick={() => openFormModal(product)}
-                      className="p-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 transition-all font-semibold"
+                      className="p-2 text-yellow-600 bg-yellow-50 hover:bg-yellow-100 rounded-lg border border-yellow-200 transition-all font-semibold"
                       title="Modifier"
                     >
                       <Edit size={16} />

@@ -29,7 +29,7 @@ export const Login: React.FC = () => {
     setError('');
     
     // Identifiants de test : tchouna@tchouna / tchouna
-    const isTestUser = data.identifier === 'tchouna@tchouna' && data.password === 'nanou';
+    const isTestUser = data.identifier === 'tchouna@tchouna' && data.password === 'tchouna';
 
     try {
       if (isTestUser || (data.identifier === 'admin@fabrikti.com' && data.password === 'admin')) {

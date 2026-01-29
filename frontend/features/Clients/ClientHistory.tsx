@@ -150,7 +150,9 @@ export const ClientHistory: React.FC = () => {
               <h2 className="text-2xl font-semibold text-gray-900">
                 {client.name}
               </h2>
-              <p className="text-sm text-gray-500 mt-0.5">Historique du client</p>
+              <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${(client as any).type === 'FOURNISSEUR' ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700'}`}>
+            {(client as any).type === 'FOURNISSEUR' ? 'Fournisseur' : 'Client'}
+          </span>
             </div>
           </div>
           <div className="flex items-center gap-3">

@@ -94,6 +94,9 @@ export const OrderManagement: React.FC = () => {
   const { data: clients } = useQuery({ queryKey: ['clients'], queryFn: FabriktiService.getClients });
   const { data: products } = useQuery({ queryKey: ['products'], queryFn: FabriktiService.getProducts });
 
+  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
+  const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
+
   const saveMutation = useMutation({
     mutationFn: (data: Partial<Order>) => FabriktiService.saveOrder(data),
     onSuccess: () => {
@@ -428,7 +431,7 @@ export const OrderManagement: React.FC = () => {
                           </td>
                           <td className="px-6 py-4 text-right">
                             <div className="flex justify-end gap-2">
-                              {/*  */}
+                              {/*  
 
                               <Link to={`/orders/${order.id}`}>
                                 <button
@@ -438,6 +441,7 @@ export const OrderManagement: React.FC = () => {
                                   <ChevronRight size={16} />
                                 </button>
                               </Link>
+                              */}
                               <button
                                 onClick={() => handleOpenPrint(order)}
                                 className="p-2 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200 transition-all font-semibold"
@@ -674,175 +678,455 @@ export const OrderManagement: React.FC = () => {
         </div>
       )}
 
-      {/* MODAL PRINT */}
-      {isPrintModalOpen && selectedOrderForPrint && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center">
-              <h2 className="text-xl font-bold text-slate-900">Bon de Commande</h2>
-              <button onClick={() => setIsPrintModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
-                <X size={20} className="text-slate-600" />
-              </button>
-            </div>
-            <div className="p-8 space-y-6">
-              <div className="text-center border-b border-slate-200 pb-6">
-                <h1 className="text-3xl font-bold text-slate-900 mb-2">BON DE COMMANDE</h1>
-                <p className="text-slate-600">#{selectedOrderForPrint.id.slice(0,8).toUpperCase()}</p>
-              </div>
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Client</h3>
-                  <p className="font-semibold text-slate-900">{clients?.find(c => c.id === selectedOrderForPrint.clientId)?.name}</p>
-                </div>
-                <div>
-                  <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Date</h3>
-                  <p className="font-semibold text-slate-900">{new Date(selectedOrderForPrint.orderDate).toLocaleDateString('fr-FR')}</p>
-                </div>
-              </div>
-              <div>
-                <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-3">Articles</h3>
-                <table className="w-full text-sm">
-                  <thead className="bg-slate-50 border-b border-slate-200">
-                    <tr>
-                      <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">Produit</th>
-                      <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">Qté</th>
-                      <th className="px-3 py-2 text-right text-xs font-semibold text-slate-600">PU</th>
-                      <th className="px-3 py-2 text-right text-xs font-semibold text-slate-600">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {selectedOrderForPrint.items?.map((item, idx) => {
-                      const p = products?.find(prod => prod.id === item.productId);
-                      return (
-                        <tr key={idx}>
-                          <td className="px-3 py-2">{p?.name || 'Produit Inconnu'}</td>
-                          <td className="px-3 py-2">{item.quantity} {item.unit}</td>
-                          <td className="px-3 py-2 text-right">{item.unitPrice?.toLocaleString()} DA</td>
-                          <td className="px-3 py-2 text-right font-semibold">{item.totalItemPrice?.toLocaleString()} DA</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                  <tfoot className="border-t-2 border-slate-300">
-                    <tr>
-                      <td colSpan={3} className="px-3 py-3 text-right font-bold text-slate-900">TOTAL</td>
-                      <td className="px-3 py-3 text-right font-bold text-indigo-600 text-lg">{selectedOrderForPrint.totalPrice.toLocaleString()} DA</td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-              {selectedOrderForPrint.notes && (
-                <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
-                  <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Notes</h3>
-                  <p className="text-sm text-slate-700">{selectedOrderForPrint.notes}</p>
-                </div>
-              )}
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
-                <button
-                  onClick={() => setIsPrintModalOpen(false)}
-                  className="px-4 py-2 text-slate-700 bg-white border border-slate-200 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-all"
-                >
-                  Fermer
-                </button>
-                <button
-                  onClick={() => window.print()}
-                  className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-all"
-                >
-                  <Printer size={16} />
-                  Imprimer
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+{/* MODAL PRINT - Devenu FICHE D'ATELIER / FABRICATION */}
+{isPrintModalOpen && selectedOrderForPrint && (
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-10">
+    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+      <div className="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center print:hidden">
+        <h2 className="text-xl font-bold text-slate-900">Fiche de Fabrication</h2>
+        <button onClick={() => setIsPrintModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
+          <X size={20} className="text-slate-600" />
+        </button>
+      </div>
+      
+      <div className="p-8 space-y-8 print:p-0">
+        {/* EN-TÊTE TECHNIQUE */}
+        <div className="flex justify-between items-start border-b-2 border-slate-900 pb-6">
+          <div>
+            <h1 className="text-3xl font-black text-slate-900 tracking-tighter">FICHE ATELIER</h1>
 
-      {/* MODAL DETAILS */}
-      {isDetailsModalOpen && selectedOrder && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center">
-              <h2 className="text-xl font-bold text-slate-900">Détails de la commande</h2>
-              <button onClick={closeDetailsModal} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
-                <X size={20} className="text-slate-600" />
-              </button>
+          </div>
+          <div className="text-right">
+            <div className="flex items-center justify-end gap-2 text-slate-600 mb-1">
+              <Calendar size={16} />
+              <span className="text-sm font-semibold">Date: {new Date(selectedOrderForPrint.orderDate).toLocaleDateString('fr-FR')}</span>
             </div>
-            <div className="p-6 space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
-                  <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Référence</p>
-                  <p className="font-bold text-slate-900">#{selectedOrder.id.slice(0,8).toUpperCase()}</p>
-                </div>
-                <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
-                  <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Client</p>
-                  <p className="font-bold text-slate-900">{clients?.find(c => c.id === selectedOrder.clientId)?.name}</p>
-                </div>
-                <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
-                  <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Date commande</p>
-                  <p className="font-bold text-slate-900">{new Date(selectedOrder.orderDate).toLocaleDateString('fr-FR')}</p>
-                </div>
-                <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
-                  <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Livraison prévue</p>
-                  <p className="font-bold text-slate-900">{selectedOrder.deliveryDate || 'Non définie'}</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 bg-indigo-50 rounded-lg border border-indigo-200">
-                  <p className="text-xs font-semibold text-indigo-900 uppercase tracking-wider mb-1">Statut</p>
-                  <p className="font-bold text-indigo-600">{STATUS_LABELS[selectedOrder.status]?.label}</p>
-                </div>
-                <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-200">
-                  <p className="text-xs font-semibold text-emerald-900 uppercase tracking-wider mb-1">Paiement</p>
-                  <p className="font-bold text-emerald-600">{PAYMENT_LABELS[selectedOrder.paymentStatus]?.label}</p>
-                </div>
-              </div>
-              <div>
-                <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-3">Articles commandés</h3>
-                <div className="space-y-2">
-                  {selectedOrder.items?.map((item, idx) => {
-                    const p = products?.find(prod => prod.id === item.productId);
-                    return (
-                      <div key={idx} className="flex justify-between items-center p-3 bg-slate-50 rounded-lg border border-slate-200">
-                        <div>
-                          <p className="font-semibold text-slate-900">{p?.name || 'Produit Inconnu'}</p>
-                          <p className="text-xs text-slate-600">{item.quantity} {item.unit} × {item.unitPrice?.toLocaleString()} DA</p>
-                        </div>
-                        <p className="font-bold text-slate-900">{item.totalItemPrice?.toLocaleString()} DA</p>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-              <div className="p-4 bg-indigo-600 rounded-lg text-white">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-semibold uppercase tracking-wider">Montant total</span>
-                  <span className="text-2xl font-bold">{selectedOrder.totalPrice.toLocaleString()} DA</span>
-                </div>
-              </div>
-              {selectedOrder.notes && (
-                <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
-                  <h3 className="text-xs font-semibold text-amber-900 uppercase tracking-wider mb-2">Notes internes</h3>
-                  <p className="text-sm text-amber-900">{selectedOrder.notes}</p>
-                </div>
-              )}
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
-                <button
-                  onClick={closeDetailsModal}
-                  className="px-4 py-2 text-slate-700 bg-white border border-slate-200 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-all"
-                >
-                  Fermer
-                </button>
-                <Link to={`/orders/${selectedOrder.id}`}>
-                  <button className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-all">
-                    <FileText size={16} />
-                    Voir détails complets
-                  </button>
-                </Link>
-              </div>
+            <div className="flex items-center justify-end gap-2 text-indigo-600">
+              <Truck size={16} />
+              <span className="text-sm font-bold">Livraison {selectedOrderForPrint.deliveryDate ? new Date(selectedOrderForPrint.deliveryDate).toLocaleDateString('fr-FR') : ''}</span>
             </div>
           </div>
         </div>
-      )}
+
+        {/* INFOS CLIENT & STATUT */}
+        <div className="grid grid-cols-2 gap-8">
+          <div className="border-l-4 border-slate-200 pl-4">
+            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Destinataire / Client</h3>
+            <p className="text-5xl font-bold text-slate-900">{clients?.find(c => c.id === selectedOrderForPrint.clientId)?.name}</p>
+          </div>
+
+        </div>
+
+        {/* TABLEAU DE FABRICATION (SANS PRIX) */}
+        <div>
+          <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-4 flex items-center gap-2">
+            <Package size={18} />
+            LISTE DES ARTICLES À FABRIQUER
+          </h3>
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="bg-slate-100 border-y-2 border-slate-900">
+                <th className="px-4 py-3 text-left text-sm font-black text-slate-900">RÉFÉRENCE / PRODUIT</th>
+                <th className="px-4 py-3 text-center text-sm font-black text-slate-900 w-32">QUANTITÉ</th>
+                <th className="px-4 py-3 text-center text-sm font-black text-slate-900 w-32">UNITÉ</th>
+                <th className="px-4 py-3 text-center text-sm font-black text-slate-900 w-20">PRÊT</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200">
+              {selectedOrderForPrint.items?.map((item, idx) => {
+                const p = products?.find(prod => prod.id === item.productId);
+                return (
+                  <tr key={idx} className="border-b border-slate-100">
+                    <td className="px-4 py-4">
+                      <p className="text-2xl font-bold text-lg text-slate-900">{p?.name || 'Produit Inconnu'}</p>
+                      <p className="text-xs text-slate-500 font-mono">ID: {p?.reference || 'N/A'}</p>
+                    </td>
+                    <td className="px-4 py-4 text-center">
+                      <span className="text-2xl font-black text-slate-900">{item.quantity}</span>
+                    </td>
+                    <td className="px-4 py-4 text-center text-slate-600 font-medium uppercase text-sm">
+                      {item.unit}
+                    </td>
+                    <td className="px-4 py-4 text-center">
+                      <div className="w-6 h-6 border-2 border-slate-300 rounded mx-auto"></div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {/* INSTRUCTIONS SPÉCIALES (TRÈS VISIBLES) */}
+        <div className="bg-slate-50 border-2 border-dashed border-slate-300 p-1 rounded-xl">
+          <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-3 flex items-center gap-2">
+            <Info size={18} className="text-amber-500" />
+            INSTRUCTIONS DE FABRICATION / NOTES
+          </h3>
+          <p className="text-xl text-slate-800 font-medium leading-relaxed italic">
+            {selectedOrderForPrint.notes || "Aucune instruction particulière pour cette commande."}
+          </p>
+        </div>
+
+
+        {/* BOUTONS ACTIONS (CACHÉS À L'IMPRESSION) */}
+        <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 print:hidden">
+          <button
+            onClick={() => setIsPrintModalOpen(false)}
+            className="px-4 py-2 text-slate-700 bg-white border border-slate-200 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-all"
+          >
+            Fermer
+          </button>
+          <button
+            onClick={() => window.print()}
+            className="flex items-center gap-2 px-6 py-2 bg-indigo-600 text-white rounded-lg text-sm font-bold hover:bg-indigo-800 transition-all shadow-lg"
+          >
+            <Printer size={18} />
+            Lancer la fabrication
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+
+{/* MODAL DETAILS */}
+{isDetailsModalOpen && selectedOrder && (
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+      <div className="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center">
+        <h2 className="text-xl font-bold text-slate-900">Détails de la commande #{selectedOrder.id.slice(0,8).toUpperCase()}</h2>
+        <button onClick={closeDetailsModal} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
+          <X size={20} className="text-slate-600" />
+        </button>
+      </div>
+      
+      <div className="p-6 space-y-6">
+        {/* EN-TÊTE PRINCIPALE */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+            <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Client</p>
+            <p className="font-bold text-slate-900">{clients?.find(c => c.id === selectedOrder.clientId)?.name}</p>
+          </div>
+          <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+            <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Date commande</p>
+            <p className="font-bold text-slate-900">{new Date(selectedOrder.orderDate).toLocaleDateString('fr-FR')}</p>
+          </div>
+          <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+            <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Livraison prévue</p>
+            <p className="font-bold text-slate-900">
+              {selectedOrder.deliveryDate 
+                ? new Date(selectedOrder.deliveryDate).toLocaleDateString('fr-FR') 
+                : 'Non définie'}
+            </p>
+          </div>
+          <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+            <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Référence</p>
+            <p className="font-mono font-bold text-slate-900">#{selectedOrder.id.slice(0,8).toUpperCase()}</p>
+          </div>
+        </div>
+
+        {/* STATUTS & PAIEMENT */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="p-4 bg-indigo-50 rounded-lg border border-indigo-200">
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-xs font-semibold text-indigo-900 uppercase tracking-wider mb-1">Statut actuel</p>
+                <div className="flex items-center gap-2 mt-1">
+                  {(() => {
+                    const config = STATUS_LABELS[selectedOrder.status];
+                    return (
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium ${config.bgColor} ${config.textColor}`}>
+                        {config.icon}
+                        {config.label}
+                      </span>
+                    );
+                  })()}
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsStatusModalOpen(true)}
+                className="p-1.5 text-indigo-600 hover:bg-indigo-100 rounded transition-colors"
+                title="Modifier le statut"
+              >
+                <Edit3 size={16} />
+              </button>
+            </div>
+          </div>
+          <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-200">
+            <p className="text-xs font-semibold text-emerald-900 uppercase tracking-wider mb-1">Statut paiement</p>
+            <div className="flex items-center gap-2 mt-1">
+              {(() => {
+                const config = PAYMENT_LABELS[selectedOrder.paymentStatus];
+                return (
+                  <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium ${config.bgColor} ${config.textColor}`}>
+                    {config.label}
+                  </span>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
+
+        {/* ARTICLES */}
+        <div>
+          <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-3 flex items-center gap-2">
+            <Package size={14} />
+            Articles commandés ({selectedOrder.items?.length || 0})
+          </h3>
+          <div className="space-y-3">
+            {selectedOrder.items?.map((item, idx) => {
+              const product = products?.find(p => p.id === item.productId);
+              return (
+                <div key={idx} className="flex justify-between items-center p-4 bg-white rounded-lg border border-slate-200 shadow-sm">
+                  <div className="flex-1">
+                    <p className="font-semibold text-slate-900">{product?.name || 'Produit inconnu'}</p>
+                    <div className="flex flex-wrap gap-3 mt-1 text-xs text-slate-600">
+                      <span>{item.quantity} {item.unit}</span>
+                      <span>× {item.unitPrice?.toLocaleString()} DA</span>
+                      {product && (
+                        <span className="bg-slate-100 px-2 py-0.5 rounded">
+                          Ref: {product.reference}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-bold text-slate-900">{item.totalItemPrice?.toLocaleString()} DA</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* MONTANT TOTAL */}
+        <div className="p-5 bg-gradient-to-r from-indigo-600 to-blue-600 rounded-xl text-white shadow-lg">
+          <div className="flex justify-between items-center">
+            <div>
+              <p className="text-sm font-medium opacity-90">Montant total</p>
+              <p className="text-2xl font-bold mt-1">{selectedOrder.totalPrice.toLocaleString()} DA</p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs opacity-80">Payé: {selectedOrder.paidAmount?.toLocaleString() || 0} DA</p>
+              <p className="text-xs mt-1">
+                Reste: <span className="font-bold">
+                  {(selectedOrder.totalPrice - (selectedOrder.paidAmount || 0)).toLocaleString()} DA
+                </span>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* NOTES INTERNES */}
+        <div>
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wider flex items-center gap-2">
+              <Info size={14} />
+              Notes internes
+            </h3>
+            <button 
+              onClick={() => setIsNotesModalOpen(true)}
+              className="p-1.5 text-slate-600 hover:bg-slate-100 rounded transition-colors"
+              title="Modifier les notes"
+            >
+              <Edit3 size={14} />
+            </button>
+          </div>
+          {selectedOrder.notes ? (
+            <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
+              <p className="text-amber-900 whitespace-pre-line">{selectedOrder.notes}</p>
+            </div>
+          ) : (
+            <button
+              onClick={() => setIsNotesModalOpen(true)}
+              className="w-full text-left p-4 bg-slate-50 rounded-lg border border-dashed border-slate-200 hover:bg-slate-100 transition-colors"
+            >
+              <p className="text-slate-500 italic text-sm text-center">
+                + Ajouter des notes internes
+              </p>
+            </button>
+          )}
+        </div>
+
+        {/* TIMELINE DES ÉTAPES (SIMULÉE) */}
+        <div>
+          <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-3 flex items-center gap-2">
+            <Clock size={14} />
+            Historique des étapes
+          </h3>
+          <div className="space-y-4">
+            {[
+              { date: selectedOrder.orderDate, status: 'Commande créée', icon: <Plus size={14} /> },
+              ...(selectedOrder.status === OrderStatus.EN_PREPARATION ? [{ date: '', status: 'En préparation', icon: <Package size={14} /> }] : []),
+              ...(selectedOrder.status === OrderStatus.EN_STOCK ? [{ date: '', status: 'En stock', icon: <Database size={14} /> }] : []),
+              ...(selectedOrder.status === OrderStatus.LIVREE ? [{ date: selectedOrder.deliveryDate, status: 'Livrée', icon: <Truck size={14} /> }] : []),
+              ...(selectedOrder.status === OrderStatus.ANNULEE ? [{ date: '', status: 'Annulée', icon: <Ban size={14} /> }] : [])
+            ]
+              .filter(Boolean)
+              .map((step: any, idx) => (
+                <div key={idx} className="flex gap-3">
+                  <div className="flex flex-col items-center">
+                    <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
+                      {step.icon}
+                    </div>
+                    {idx < 3 && <div className="w-0.5 h-full bg-slate-200 my-1"></div>}
+                  </div>
+                  <div className="pb-2">
+                    <p className="font-medium text-slate-900">{step.status}</p>
+                    {step.date && (
+                      <p className="text-xs text-slate-500 mt-1">
+                        {new Date(step.date).toLocaleString('fr-FR', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+          </div>
+        </div>
+
+        {/* BOUTONS ACTIONS */}
+        <div className="flex justify-center gap-3 pt-4 border-t border-slate-200">
+          <button
+            onClick={closeDetailsModal}
+            className="px-8 py-4 text-slate-700 bg-white border border-slate-200 rounded-lg text-sm font-semibold hover:bg-indigo-600 hover:text-white transition-all"
+          >
+            Fermer
+          </button>
+          {/*
+          <Link to={`/orders/${selectedOrder.id}`} className="ml-auto">
+            <button className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-all">
+              <FileText size={16} />
+              Voir détails complets
+            </button>
+          </Link>
+          */}
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+
+{/* MODAL MODIFICATION STATUT */}
+{isStatusModalOpen && selectedOrder && (
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+      <div className="border-b border-slate-200 px-6 py-4 flex justify-between items-center">
+        <h3 className="text-lg font-bold text-slate-900">Modifier le statut</h3>
+        <button 
+          onClick={() => setIsStatusModalOpen(false)}
+          className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+        >
+          <X size={20} className="text-slate-600" />
+        </button>
+      </div>
+      
+      <div className="p-6">
+        <div className="space-y-3">
+          {Object.values(OrderStatus).map(status => {
+            const config = STATUS_LABELS[status];
+            return (
+              <button
+                key={status}
+                onClick={() => {
+                  saveMutation.mutate({
+                    id: selectedOrder.id,
+                    status: status
+                  });
+                  setIsStatusModalOpen(false);
+                }}
+                className={`w-full flex items-center gap-3 p-3 rounded-lg border text-left transition-all ${
+                  selectedOrder.status === status
+                    ? 'border-indigo-500 bg-indigo-50'
+                    : 'border-slate-200 hover:bg-slate-50'
+                }`}
+              >
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                  selectedOrder.status === status 
+                    ? 'bg-indigo-500 text-white' 
+                    : `${config.bgColor} ${config.textColor}`
+                }`}>
+                  {config.icon}
+                </div>
+                <span className={`font-medium ${
+                  selectedOrder.status === status 
+                    ? 'text-indigo-700' 
+                    : 'text-slate-700'
+                }`}>
+                  {config.label}
+                </span>
+                {selectedOrder.status === status && (
+                  <CheckCircle2 size={18} className="ml-auto text-indigo-500" />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+
+{/* MODAL MODIFICATION NOTES */}
+{isNotesModalOpen && selectedOrder && (
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+      <div className="border-b border-slate-200 px-6 py-4 flex justify-between items-center">
+        <h3 className="text-lg font-bold text-slate-900">Notes internes</h3>
+        <button 
+          onClick={() => setIsNotesModalOpen(false)}
+          className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+        >
+          <X size={20} className="text-slate-600" />
+        </button>
+      </div>
+      
+      <form 
+        onSubmit={(e) => {
+          e.preventDefault();
+          const formData = new FormData(e.target as HTMLFormElement);
+          saveMutation.mutate({
+            id: selectedOrder.id,
+            notes: formData.get('notes') as string
+          });
+          setIsNotesModalOpen(false);
+        }}
+        className="p-6 space-y-4"
+      >
+        <div>
+          <textarea
+            name="notes"
+            defaultValue={selectedOrder.notes || ''}
+            rows={5}
+            placeholder="Instructions pour l'atelier, détails spécifiques..."
+            className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none text-sm resize-none"
+          />
+        </div>
+        <div className="flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={() => setIsNotesModalOpen(false)}
+            className="px-4 py-2 text-slate-700 bg-white border border-slate-200 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-all"
+          >
+            Annuler
+          </button>
+          <button
+            type="submit"
+            className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-all"
+          >
+            Enregistrer
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+)}
     </div>
   );
 };

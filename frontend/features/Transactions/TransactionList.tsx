@@ -18,19 +18,13 @@ type TransactionContext = 'ORDER' | 'MATERIAL' | 'CLIENT' | 'SUPPLIER' | 'OTHER'
 // Catégories avec vrais icônes
 const CATEGORIES = {
   CLIENT: { 
-    label: 'Client', 
+    label: 'Partenaire', 
     icon: User, 
     color: 'bg-blue-100 text-blue-700 border-blue-200',
     gradient: 'from-blue-500 to-indigo-600',
-    description: 'Paiement d\'un client'
+    description: 'Paiement d\'un partenaire'
   },
-  SUPPLIER: { 
-    label: 'Fournisseur', 
-    icon: Truck, 
-    color: 'bg-purple-100 text-purple-700 border-purple-200',
-    gradient: 'from-purple-500 to-pink-600',
-    description: 'Paiement à un fournisseur'
-  },
+
   ORDER: { 
     label: 'Commande', 
     icon: ShoppingBag, 
@@ -823,7 +817,7 @@ export const TransactionList: React.FC = () => {
                   {formData.category !== 'OTHER' && (
                     <div>
                       <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">
-                        {formData.category === 'CLIENT' && '👤 Client associé'}
+                        {formData.category === 'CLIENT' && '👤 Partenaire associé'}
                         {formData.category === 'SUPPLIER' && '🚚 Fournisseur associé'}
                         {formData.category === 'ORDER' && '📦 Commande associée'}
                         {formData.category === 'MATERIAL' && '🧱 Matière première associée'}
