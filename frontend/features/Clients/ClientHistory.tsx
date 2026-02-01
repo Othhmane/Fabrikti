@@ -75,26 +75,21 @@ export const ClientHistory: React.FC = () => {
     return transactions.filter(t => t.clientId === id || (t.orderId && clientOrders.some(o => o.id === t.orderId)));
   }, [transactions, id, clientOrders]);
 
-  const stats = useMemo(() => {
-    const totalInvoiced = clientOrders.reduce((sum, o) => sum + o.totalPrice, 0);
-    const totalIncomes = clientTransactions.filter(t => t.type === TransactionType.INCOME).reduce((sum, t) => sum + t.amount, 0);
-    const totalExpenses = clientTransactions.filter(t => t.type === TransactionType.EXPENSE).reduce((sum, t) => sum + t.amount, 0);
-    const netPaid = totalIncomes - totalExpenses;
-    const balance = netPaid - totalInvoiced;
-    const averageOrder = clientOrders.length > 0 ? totalInvoiced / clientOrders.length : 0;
-    
-    return {
-      totalInvoiced,
-      totalIncomes,
-      totalExpenses,
-      netPaid,
-      balance,
-      averageOrder,
-      isDebtor: balance < 0,
-      isCreditor: balance > 0
-    };
-  }, [clientOrders, clientTransactions]);
-
+const stats = useMemo(() => {
+  const totalInvoiced = clientOrders.reduce((sum, o) => sum + o.totalPrice, 0);
+  const totalAdvancePayments = clientOrders.reduce((sum, o) => sum + (o.paidAmount || 0), 0);
+  const balance = totalAdvancePayments - totalInvoiced;
+  const averageOrder = clientOrders.length > 0 ? totalInvoiced / clientOrders.length : 0;
+  
+  return {
+    totalInvoiced,
+    totalAdvancePayments,
+    balance,
+    averageOrder,
+    isDebtor: balance < 0,
+    isCreditor: balance > 0
+  };
+}, [clientOrders]);
   const timeline = useMemo(() => {
     const combined: any[] = [
       ...clientOrders.map(o => ({ ...o, _type: 'ORDER' })),
@@ -198,14 +193,13 @@ export const ClientHistory: React.FC = () => {
               <ArrowUpCircle size={18} className="text-white"/>
             </div>
             <div>
-              <p className="text-xs text-emerald-600">Réglé</p>
-              <p className="text-sm font-semibold text-emerald-600">+{stats.totalIncomes.toLocaleString()} DA</p>
+              <p className="text-xs text-emerald-600">Versements</p>
+              <p className="text-sm font-semibold text-emerald-600">+{stats.totalAdvancePayments.toLocaleString()} DA</p>
             </div>
           </div>
-          <p className="text-xs text-gray-500 mb-1">Total Payé Net</p>
-          <p className="text-2xl font-semibold text-emerald-600">{stats.netPaid.toLocaleString()} DA</p>
+          <p className="text-xs text-gray-500 mb-1">Total Reçu</p>
+          <p className="text-2xl font-semibold text-emerald-600">{stats.totalAdvancePayments.toLocaleString()} DA</p>
         </div>
-
         {/* Solde Client */}
         <div className={`rounded-lg p-5 ${stats.balance < 0 ? 'bg-gradient-to-br from-rose-400 to-rose-400' : 'bg-gradient-to-br from-indigo-500 to-indigo-600'}`}>
           <div className="flex items-center gap-3 mb-3">
@@ -295,63 +289,76 @@ export const ClientHistory: React.FC = () => {
                 <p className="text-gray-400 text-sm">Aucun historique disponible</p>
               </div>
             )}
+          {filteredTimeline.map((item, idx) => {
+            const isOrder = item._type === 'ORDER';
+            
+            return (
+              <div key={idx} className="bg-white border border-gray-100 rounded-lg p-4 hover:border-indigo-200 transition-all">
+                <div className="flex items-start gap-4">
+                  {/* Icône */}
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
+                    isOrder 
+                    ? 'bg-blue-50 text-blue-600' 
+                    : (item.type === TransactionType.INCOME ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600')
+                  }`}>
+                    {isOrder ? <Package size={18}/> : <ArrowRightLeft size={18}/>}
+                  </div>
 
-            {filteredTimeline.map((item, idx) => {
-              const isOrder = item._type === 'ORDER';
-              
-              return (
-                <div key={idx} className="bg-white border border-gray-100 rounded-lg p-4 hover:border-indigo-200 transition-all">
-                  <div className="flex items-start gap-4">
-                    {/* Icône */}
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
-                      isOrder 
-                      ? 'bg-blue-50 text-blue-600' 
-                      : (item.type === TransactionType.INCOME ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600')
-                    }`}>
-                      {isOrder ? <Package size={18}/> : <ArrowRightLeft size={18}/>}
+                  {/* Contenu */}
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs text-gray-500">
+                        {new Date(item.orderDate || item.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      </span>
+                      <span className={`px-2 py-0.5 rounded text-xs ${
+                        isOrder 
+                        ? 'bg-blue-50 text-blue-600' 
+                        : (item.type === TransactionType.INCOME ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600')
+                      }`}>
+                        {isOrder ? 'Bon de Commande' : (item.type === TransactionType.INCOME ? 'Encaissement' : 'Décaissement')}
+                      </span>
                     </div>
-
-                    {/* Contenu */}
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs text-gray-500">
-                          {new Date(item.orderDate || item.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
-                        </span>
-                        <span className={`px-2 py-0.5 rounded text-xs ${
-                          isOrder 
-                          ? 'bg-blue-50 text-blue-600' 
-                          : (item.type === TransactionType.INCOME ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600')
-                        }`}>
-                          {isOrder ? 'Bon de Commande' : (item.type === TransactionType.INCOME ? 'Encaissement' : 'Décaissement')}
-                        </span>
-                      </div>
-                      <h4 className="text-sm font-semibold text-gray-900 mb-1">
-                        {isOrder ? `Commande CMD-${item.id.slice(0,5)}` : item.description}
-                      </h4>
-                      {isOrder && (
-                        <p className="text-xs text-gray-500">
+                    <h4 className="text-sm font-semibold text-gray-900 mb-1">
+                      {isOrder ? `Commande CMD-${item.id.slice(0,5)}` : item.description}
+                    </h4>
+                    {isOrder && (
+                      <div className="text-xs text-gray-500 space-y-1">
+                        <p>
                           {item.items?.length || 0} articles • Statut : {item.status}
                         </p>
-                      )}
-                    </div>
+                        {item.paidAmount > 0 && (
+                          <p className="text-emerald-600 font-medium">
+                            Versement: <span className="font-bold">+{item.paidAmount.toLocaleString()} DA</span>
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
 
-                    {/* Montant */}
-                    <div className="text-right">
-                      <p className={`text-lg font-semibold ${isOrder ? 'text-gray-900' : (item.type === TransactionType.INCOME ? 'text-emerald-600' : 'text-rose-600')}`}>
-                        {isOrder ? '' : (item.type === TransactionType.INCOME ? '+' : '-')}{item.amount || item.totalPrice} DA
+                  {/* Montant */}
+                  <div className="text-right">
+                    <p className={`text-lg font-semibold ${isOrder ? 'text-gray-900' : (item.type === TransactionType.INCOME ? 'text-emerald-600' : 'text-rose-600')}`}>
+                      {isOrder 
+                        ? `${item.totalPrice.toLocaleString()} DA` 
+                        : `${item.type === TransactionType.INCOME ? '+' : '-'}${item.amount.toLocaleString()} DA`}
+                    </p>
+                    {isOrder && item.paidAmount > 0 && (
+                      <p className="text-xs text-red-600 mt-1">
+                        Reste: {(item.totalPrice - item.paidAmount).toLocaleString()} DA
                       </p>
-                      {isOrder && (
-                        <Link to={`/orders/${item.id}`}>
-                          <button className="flex items-center gap-1 text-xs text-indigo-600 hover:underline mt-1 print:hidden">
-                            Détails <ChevronRight size={12}/>
-                          </button>
-                        </Link>
-                      )}
-                    </div>
+                    )}
+                    {isOrder && (
+                      <Link to={`/orders/${item.id}`}>
+                        <button className="flex items-center gap-1 text-xs text-indigo-600 hover:underline mt-1 print:hidden">
+                          Détails <ChevronRight size={12}/>
+                        </button>
+                      </Link>
+                    )}
                   </div>
                 </div>
-              );
-            })}
+              </div>
+            );
+          })}
           </div>
         </div>
 

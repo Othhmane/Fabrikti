@@ -134,6 +134,7 @@ export interface Order {
   orderDate: string;
   updatedAt?: string; // Ajouté pour le suivi des modifs
   deliveryDate?: string;
+  remainingAmount?: number; // versement
   notes?: string;
 }
 

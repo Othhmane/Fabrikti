@@ -88,7 +88,8 @@ export const OrderManagement: React.FC = () => {
   const [filterPaymentStatus, setFilterPaymentStatus] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
 
-  const [items, setItems] = useState<Partial<OrderItem>[]>([{ id: '1', productId: '', quantity: 1, unit: 'paire', unitPrice: 0, totalItemPrice: 0 }]);
+  const [items, setItems] = useState<Partial<OrderItem>[]>([{ id: '1', productId: '', quantity: 1, unit: 'paire', unitPrice: 0, totalItemPrice: 0}]);
+  const [advancePayment, setAdvancePayment] = useState<number>(0);
 
   const { data: orders, isLoading } = useQuery({ queryKey: ['orders'], queryFn: FabriktiService.getOrders });
   const { data: clients } = useQuery({ queryKey: ['clients'], queryFn: FabriktiService.getClients });
@@ -116,13 +117,15 @@ export const OrderManagement: React.FC = () => {
 
   const handleOpenCreate = () => {
     setEditingOrder(null);
-    setItems([{ id: '1', productId: '', quantity: 1, unit: 'paire', unitPrice: 0, totalItemPrice: 0 }]);
+    setItems([{ id: '1', productId: '', quantity: 1, unit: 'paire', unitPrice: 0, totalItemPrice: 0}]);
+    setAdvancePayment(0);
     setIsModalOpen(true);
   };
 
   const handleOpenEdit = (order: Order) => {
     setEditingOrder(order);
     setItems(order.items || []);
+    setAdvancePayment(order.paidAmount || 0);
     setIsModalOpen(true);
   };
 
@@ -134,6 +137,7 @@ export const OrderManagement: React.FC = () => {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setEditingOrder(null);
+    setAdvancePayment(0);
   };
 
   const openDetailsModal = (order: Order) => {
@@ -147,7 +151,7 @@ export const OrderManagement: React.FC = () => {
   };
 
   const addLine = () => {
-    setItems([...items, { id: Date.now().toString(), productId: '', quantity: 1, unit: 'paire', unitPrice: 0, totalItemPrice: 0 }]);
+    setItems([...items, { id: Date.now().toString(), productId: '', quantity: 1, unit: 'paire', unitPrice: 0, totalItemPrice: 0}]);
   };
 
   const removeLine = (id: string) => {
@@ -171,6 +175,7 @@ export const OrderManagement: React.FC = () => {
   };
 
   const totalOrderPrice = useMemo(() => items.reduce((sum, i) => sum + (i.totalItemPrice || 0), 0), [items]);
+  const remainingAmount = useMemo(() => totalOrderPrice - advancePayment, [totalOrderPrice, advancePayment]);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -183,8 +188,12 @@ export const OrderManagement: React.FC = () => {
       status: (formData.get('status') as OrderStatus) || OrderStatus.EN_ATTENTE,
       items: items as OrderItem[],
       totalPrice: totalOrderPrice,
-      paidAmount: editingOrder?.paidAmount || 0,
-      paymentStatus: editingOrder?.paymentStatus || PaymentStatus.NON_PAYEE,
+      paidAmount: advancePayment,
+      paymentStatus: advancePayment >= totalOrderPrice 
+        ? PaymentStatus.PAYEE 
+        : advancePayment > 0 
+          ? PaymentStatus.PARTIEL 
+          : PaymentStatus.NON_PAYEE,
       notes: formData.get('notes') as string || undefined,
     };
     saveMutation.mutate(data);
@@ -542,6 +551,25 @@ export const OrderManagement: React.FC = () => {
                 </select>
               </div>
 
+              {/* Advance Payment */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Versement</label>
+                <div className="relative">
+                  <DollarSign size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input 
+                    type="number" 
+                    step="1" 
+                    value={advancePayment}
+                    onChange={(e) => setAdvancePayment(parseFloat(e.target.value) || 0)}
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                    placeholder="10 000 DA"
+                  />
+                </div>
+                <div className="mt-2 text-sm text-slate-600">
+                  Reste à payer: <span className="font-semibold">{remainingAmount.toLocaleString()} DA</span>
+                </div>
+              </div>
+
               {/* Items */}
               <div>
                 <div className="flex justify-between items-center mb-3">
@@ -605,9 +633,13 @@ export const OrderManagement: React.FC = () => {
                   ))}
                 </div>
                 <div className="mt-3 flex justify-end">
-                  <div className="px-4 py-2 bg-indigo-50 rounded-lg">
+                  <div className="px-4 py-2 bg-indigo-50 rounded-lg mr-2">
                     <span className="text-xs font-semibold text-indigo-900 uppercase tracking-wider mr-2">Total:</span>
                     <span className="text-lg font-bold text-indigo-600">{totalOrderPrice.toLocaleString()} DA</span>
+                  </div>
+                    <div className="px-4 py-2 bg-rose-50 rounded-lg">
+                    <span className="text-xs font-semibold text-rose-900 uppercase tracking-wider mr-2">Reste à payer:</span>
+                    <span className="text-lg font-bold text-rose-600">{remainingAmount.toLocaleString()} DA</span>
                   </div>
                 </div>
               </div>
