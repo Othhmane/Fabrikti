@@ -30,7 +30,8 @@ const initDB = () => {
   if (!localStorage.getItem('fabrikti_clients')) {
     storage.write('clients', [
       { id: 'c1', name: 'Kamel Lazio', email: 'lazio@lazio.com', phone: '0550805780', address: '12 Rue de la mouloudia froucha', providedProducts: [] },
-      { id: 'c2', name: 'SportPerformance SA', email: 'orders@sportperf.fr', phone: '0450607080', address: 'ZA les montagnes, Annecy', providedProducts: [] }
+      { id: 'c2', name: 'Mirano', email: 'mirano@mirano.fr', phone: '0450607080', address: 'ZA les montagnes, Annecy', providedProducts: [] },
+      { id: 'c2', name: 'Lastrada', email: 'lastrada@lastrada.fr', phone: '0450607080', address: 'ZA les montagnes, Annecy', providedProducts: []},
     ]);
     storage.write('materials', [
       { id: 'm1', name: 'Synderme', unit: 'plaque', stock: 80, paymentStatus: PaymentStatus.PARTIEL, pricePerUnit: 18, supplierId: 's1' },
@@ -52,7 +53,8 @@ const initDB = () => {
       { id: 'mch1', name: 'Thermoformeuse T-1000', status: 'operational', lastMaintenance: '2024-02-15', interventions: [] },
       { id: 'mch2', name: 'Fraiseuse Numérique CNC', status: 'operational', lastMaintenance: '2024-01-10', interventions: [] }
     ]);
-    storage.write('suppliers', [{ id: 's1', name: 'Global Material Ind.', contact: 'sales@globalmat.com', rawMaterials: ['m1', 'm2', 'm3'] }]);
+    storage.write('suppliers', [{ id: 's1', name: 'Hammoudi', contact: 'hammoudi@hammoudi.com', rawMaterials: ['m1', 'm2', 'm3'] }]);
+    storage.write('suppliers', [{ id: 's1', name: 'Zinou', contact: 'zinou@zinou.com', rawMaterials: ['m1', 'm2', 'm3'] }]);
     storage.write('diecutters', [{ id: 'd1', reference: 'REF-S-SPORT-42', size: '42', material: 'Acier' }]);
     storage.write('transactions', []);
     storage.write('orders', []);
