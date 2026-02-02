@@ -107,20 +107,33 @@ export const SupplierHistory: React.FC = () => {
             <h1 className="text-3xl font-bold text-slate-900">Partenaires</h1>
             <p className="text-sm text-slate-500 mt-2">Gestion des clients et fournisseurs</p>
           </div>
-          <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
-            <button 
-              onClick={() => setFilterType('ALL')}
-              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${filterType === 'ALL' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500'}`}
-            >Tout</button>
-            <button 
-              onClick={() => setFilterType('CLIENT')}
-              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${filterType === 'CLIENT' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500'}`}
-            >Clients</button>
-            <button 
-              onClick={() => setFilterType('FOURNISSEUR')}
-              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${filterType === 'FOURNISSEUR' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500'}`}
-            >Fournisseurs</button>
-          </div>
+{/* Barre de filtres responsive */}
+<div className="flex flex-wrap gap-2 bg-slate-100 p-1 rounded-xl border border-slate-200 w-full">
+  <button 
+    onClick={() => setFilterType('ALL')}
+    className={`flex-1 min-w-[80px] px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-center ${
+      filterType === 'ALL' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500'
+    }`}
+  >
+    Tout
+  </button>
+  <button 
+    onClick={() => setFilterType('CLIENT')}
+    className={`flex-1 min-w-[80px] px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-center ${
+      filterType === 'CLIENT' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500'
+    }`}
+  >
+    Clients
+  </button>
+  <button 
+    onClick={() => setFilterType('FOURNISSEUR')}
+    className={`flex-1 min-w-[80px] px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-center ${
+      filterType === 'FOURNISSEUR' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500'
+    }`}
+  >
+    Fournisseurs
+  </button>
+</div>
         </div>
       </div>
 

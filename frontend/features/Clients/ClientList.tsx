@@ -101,12 +101,14 @@ export const ClientList: React.FC = () => {
 
   return (
     <div className="bg-[#F8F9FC] min-h-screen font-sans">
+     
       <div className="bg-white border-b border-slate-200 px-6 md:px-10 py-6">
         <div className="max-w-7xl mx-auto flex justify-between items-end">
           <div>
             <h1 className="text-3xl font-bold text-slate-900">Partenaires</h1>
             <p className="text-sm text-slate-500 mt-2">Gestion des clients et fournisseurs</p>
           </div>
+{/*
           <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
             <button 
               onClick={() => setFilterType('ALL')}
@@ -121,6 +123,7 @@ export const ClientList: React.FC = () => {
               className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${filterType === 'FOURNISSEUR' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500'}`}
             >Fournisseurs</button>
           </div>
+           */}
         </div>
       </div>
 

@@ -31,7 +31,7 @@ const initDB = () => {
     storage.write('clients', [
       { id: 'c1', name: 'Kamel Lazio', email: 'lazio@lazio.com', phone: '0550805780', address: '12 Rue de la mouloudia froucha', providedProducts: [] },
       { id: 'c2', name: 'Mirano', email: 'mirano@mirano.fr', phone: '0450607080', address: 'ZA les montagnes, Annecy', providedProducts: [] },
-      { id: 'c2', name: 'Lastrada', email: 'lastrada@lastrada.fr', phone: '0450607080', address: 'ZA les montagnes, Annecy', providedProducts: []},
+      { id: 'c3', name: 'Lastrada', email: 'lastrada@lastrada.fr', phone: '0450607080', address: 'ZA les montagnes, Annecy', providedProducts: []},
     ]);
     storage.write('materials', [
       { id: 'm1', name: 'Synderme', unit: 'plaque', stock: 80, paymentStatus: PaymentStatus.PARTIEL, pricePerUnit: 18, supplierId: 's1' },
@@ -45,9 +45,9 @@ const initDB = () => {
     storage.write('products', [
       { id: 'p1', name: 'ref1', category: 'Première doublé', unit: 'paire', pricePerUnit: 12.50, consumptionFormula: [{ materialId: 'm1', quantity: 0.05 }, { materialId: 'm2', quantity: 0.1 }] },
       { id: 'p2', name: 'ref2', category: 'Première tucson', unit: 'paire', pricePerUnit: 45.00, consumptionFormula: [{ materialId: 'm1', quantity: 0.08 }, { materialId: 'm3', quantity: 0.05 }] },
-      { id: 'p2', name: 'ref3', category: 'Première synderme', unit: 'paire', pricePerUnit: 45.00, consumptionFormula: [{ materialId: 'm1', quantity: 0.08 }, { materialId: 'm3', quantity: 0.05 }] },
-      { id: 'p2', name: 'ref4', category: 'Semelle néo', unit: 'paire', pricePerUnit: 45.00, consumptionFormula: [{ materialId: 'm1', quantity: 0.08 }, { materialId: 'm3', quantity: 0.05 }] },
-      { id: 'p2', name: 'ref5', category: 'Semelle injecté', unit: 'paire', pricePerUnit: 45.00, consumptionFormula: [{ materialId: 'm1', quantity: 0.08 }, { materialId: 'm3', quantity: 0.05 }] },
+      { id: 'p3', name: 'ref3', category: 'Première synderme', unit: 'paire', pricePerUnit: 45.00, consumptionFormula: [{ materialId: 'm1', quantity: 0.08 }, { materialId: 'm3', quantity: 0.05 }] },
+      { id: 'p4', name: 'ref4', category: 'Semelle néo', unit: 'paire', pricePerUnit: 45.00, consumptionFormula: [{ materialId: 'm1', quantity: 0.08 }, { materialId: 'm3', quantity: 0.05 }] },
+      { id: 'p5', name: 'ref5', category: 'Semelle injecté', unit: 'paire', pricePerUnit: 45.00, consumptionFormula: [{ materialId: 'm1', quantity: 0.08 }, { materialId: 'm3', quantity: 0.05 }] },
     ]);
     storage.write('machines', [
       { id: 'mch1', name: 'Thermoformeuse T-1000', status: 'operational', lastMaintenance: '2024-02-15', interventions: [] },

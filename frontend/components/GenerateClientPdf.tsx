@@ -40,19 +40,19 @@ const GenerateClientPdf: React.FC<Props> = ({ client, timeline }) => {
 
   const generatePdfBlob = () => {
     const doc = new jsPDF();
-    
+
     // Configuration du document
     const pageWidth = doc.internal.pageSize.width;
     const pageHeight = doc.internal.pageSize.height;
-    
+
     // En-tête avec logo (simulé)
     doc.setFillColor(99, 102, 241);
     doc.rect(0, 0, pageWidth, 25, 'F');
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(20);
+    doc.setFontSize(2);
     doc.setFont(undefined, 'bold');
     doc.text('FABRIKTI', 14, 17);
-    
+
     // Informations de l'entreprise
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(8);
@@ -60,55 +60,55 @@ const GenerateClientPdf: React.FC<Props> = ({ client, timeline }) => {
     doc.text(' Fabrication de semelles et daccessoires pour chaussures ', 14, 30);
     doc.text('Cheraga, 16000 Alger', 14, 35);
     doc.text('Tel: +213 550 80 57 80| Email: tchouna@fabrikti.dz', 14, 40);
-    
+
     // Ligne de séparation
     doc.setDrawColor(200, 200, 200);
     doc.line(14, 45, pageWidth - 14, 45);
-    
+
     // Titre du document
     doc.setFontSize(18);
     doc.setFont(undefined, 'bold');
     doc.setTextColor(0, 0, 0);
     doc.text('FICHE CLIENT', pageWidth / 2, 55, { align: 'center' });
-    
+
     // Date du document
     doc.setFontSize(10);
     doc.setFont(undefined, 'normal');
     doc.text(`Date: ${new Date().toLocaleDateString('fr-FR')}`, pageWidth - 14, 55, { align: 'right' });
-    
+
     // Informations client
     doc.setFontSize(12);
     doc.setFont(undefined, 'bold');
     doc.text('INFORMATIONS CLIENT', 14, 70);
-    
+
     doc.setFontSize(10);
     doc.setFont(undefined, 'normal');
     doc.text(`Nom: ${client.name}`, 14, 80);
     doc.text(`Email: ${client.email || 'Non renseigné'}`, 14, 87);
     doc.text(`Téléphone: ${client.phone || 'Non renseigné'}`, 14, 94);
     doc.text(`Adresse: ${client.address || 'Non renseignée'}`, 14, 101);
-    
+
     if (client.registrationDate) {
       doc.text(`Client depuis: ${new Date(client.registrationDate).toLocaleDateString('fr-FR')}`, 14, 108);
     }
-    
+
     // Statistiques
     doc.setFontSize(12);
     doc.setFont(undefined, 'bold');
     doc.text('STATISTIQUES', pageWidth - 14, 70, { align: 'right' });
-    
+
     doc.setFontSize(10);
     doc.setFont(undefined, 'normal');
     doc.text(`Commandes: ${client.ordersCount}`, pageWidth - 14, 80, { align: 'right' });
     doc.text(`Total facturé: ${client.totalInvoiced.toLocaleString()} DA`, pageWidth - 30, 87, { align: 'right' });
     doc.text(`Dernière commande: ${client.lastOrderDate ? new Date(client.lastOrderDate).toLocaleDateString('fr-FR') : 'N/A'}`, pageWidth - 14, 94, { align: 'right' });
-    
+
     const soldeText = client.balance > 0 
       ? `Crédit: +${client.balance.toLocaleString()} DA` 
       : client.balance < 0 
         ? `Dette: ${client.balance.toLocaleString()} DA` 
         : 'Solde nul';
-    
+
     // Correction de la couleur selon le solde
     if (client.balance < 0) {
       doc.setTextColor(220, 38, 38); // Rouge pour la dette
@@ -117,19 +117,19 @@ const GenerateClientPdf: React.FC<Props> = ({ client, timeline }) => {
     } else {
       doc.setTextColor(0, 0, 0); // Noir pour solde nul
     }
-    
+
     doc.text(soldeText, pageWidth - 20, 101, { align: 'right'});
     doc.setTextColor(0, 0, 0); // Réinitialisation à noir
-    
+
     // Ligne de séparation
     doc.setLineWidth(0.5);
     doc.line(14, 115, pageWidth - 14, 115);
-    
+
     // Historique filtré
     doc.setFontSize(12);
     doc.setFont(undefined, 'bold');
     doc.text(`HISTORIQUE DES ACTIVITÉS (${timeline.length} éléments)`, 14, 125);
-    
+
     // Préparer les données pour le tableau
     const tableData = timeline.map(item => {
       const isOrder = item._type === 'ORDER';
@@ -139,7 +139,7 @@ const GenerateClientPdf: React.FC<Props> = ({ client, timeline }) => {
       const statut = isOrder 
         ? (item.status === 'completed' ? 'Livrée' : item.status === 'pending' ? 'En cours' : item.status === 'cancelled' ? 'Annulée' : item.status)
         : (item.type === 'income' ? 'Encaissement' : 'Décaissement');
-      
+
       return [
         date,
         reference,
@@ -216,13 +216,11 @@ const GenerateClientPdf: React.FC<Props> = ({ client, timeline }) => {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    
+
     if (showPreview) {
       handleClosePreview();
     }
   };
-
-// ... (reste du code identique au-dessus)
 
   return (
     <>
@@ -237,7 +235,7 @@ const GenerateClientPdf: React.FC<Props> = ({ client, timeline }) => {
       {showPreview && pdfUrl && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-2 md:p-6">
           <div className="bg-white rounded-xl shadow-2xl w-full h-full max-w-6xl flex flex-col overflow-hidden">
-            
+
             {/* Barre d'outils du Modal */}
             <div className="flex items-center justify-between p-4 border-b bg-gray-50">
               <div>
@@ -246,7 +244,7 @@ const GenerateClientPdf: React.FC<Props> = ({ client, timeline }) => {
                 </h3>
                 <p className="text-xs text-gray-500">{client.name} - Fiche Client</p>
               </div>
-              
+
               <div className="flex items-center gap-3">
                 <button
                   onClick={handleDownload}
@@ -255,9 +253,9 @@ const GenerateClientPdf: React.FC<Props> = ({ client, timeline }) => {
                   <Printer size={16} />
                   Télécharger le PDF
                 </button>
-                
+
                 <div className="w-px h-8 bg-gray-200 mx-1" />
-                
+
                 <button
                   onClick={handleClosePreview}
                   className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all"
@@ -277,7 +275,7 @@ const GenerateClientPdf: React.FC<Props> = ({ client, timeline }) => {
                 />
               </div>
             </div>
-            
+
             {/* Pied de page du Modal (Optionnel) */}
             <div className="p-3 border-t bg-gray-50 text-center">
               <p className="text-[10px] text-gray-400 uppercase tracking-widest font-medium">
@@ -291,4 +289,50 @@ const GenerateClientPdf: React.FC<Props> = ({ client, timeline }) => {
   );
 };
 
-export default GenerateClientPdf;
+// Exemple d'utilisation
+function App() {
+  const sampleClient = {
+    name: "Mohamed Tchouna",
+    email: "tchouna@example.com",
+    phone: "+213 550 80 57 80",
+    address: "123 Rue de l'Industrie, Cheraga, Alger",
+    ordersCount: 15,
+    totalInvoiced: 250000,
+    balance: -15000,
+    registrationDate: "2023-01-15",
+    lastOrderDate: "2024-03-20"
+  };
+
+  const sampleTimeline = [
+    {
+      _type: "ORDER",
+      id: "ord_12345",
+      orderDate: "2024-03-20",
+      totalPrice: 25000,
+      status: "completed"
+    },
+    {
+      _type: "TRANSACTION",
+      id: "trx_67890",
+      date: "2024-03-15",
+      amount: 20000,
+      type: "income"
+    },
+    {
+      _type: "ORDER",
+      id: "ord_abcde",
+      orderDate: "2024-02-10",
+      totalPrice: 30000,
+      status: "pending"
+    }
+  ];
+
+  return (
+    <div className="p-8">
+      <h1 className="text-2xl font-bold mb-6">Exemple de génération de PDF client</h1>
+      <GenerateClientPdf client={sampleClient} timeline={sampleTimeline} />
+    </div>
+  );
+}
+
+App;

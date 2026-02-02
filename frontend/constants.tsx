@@ -35,9 +35,9 @@ export const NAVIGATION_ITEMS = [
   { name: 'Produits', path: APP_ROUTES.PRODUCTS, icon: <Package size={20} /> },
   { name: 'Matières Premières', path: APP_ROUTES.RAW_MATERIALS, icon: <Layers size={20} /> },
  // { name: 'Fournisseurs', path: APP_ROUTES.SUPPLIERS, icon: <Truck size={20} /> },
-  { name: 'Emporte-pièces', path: APP_ROUTES.DIECUTTERS, icon: <Scissors size={20} /> },
-  { name: 'Machines', path: APP_ROUTES.MACHINES, icon: <Settings size={20} /> },
-  { name: 'Thème', path: APP_ROUTES.THEME, icon: <Palette size={20} /> },
+ // { name: 'Emporte-pièces', path: APP_ROUTES.DIECUTTERS, icon: <Scissors size={20} /> },
+  //{ name: 'Machines', path: APP_ROUTES.MACHINES, icon: <Settings size={20} /> },
+  //{ name: 'Thème', path: APP_ROUTES.THEME, icon: <Palette size={20} /> },
 ];
 
 export const THEME_COLORS = [
