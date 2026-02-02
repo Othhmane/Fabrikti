@@ -8,7 +8,7 @@ import {
   ArrowLeft, Clock, Package, Truck, Database, 
   User, CreditCard, Calendar, ShoppingCart, 
   CheckCircle, Trash2, Edit, Ban, 
-  DollarSign, Info, Phone, MapPin
+  DollarSign, Info, Phone, MapPin, Truck as TruckIcon
 } from 'lucide-react';
 
 const STATUS_LABELS = {
@@ -37,6 +37,7 @@ export const OrderDetails: React.FC = () => {
 
   const order = orders?.find(o => o.id === id);
   const client = clients?.find(c => c.id === order?.clientId);
+  const isSupplier = (client as any)?.type === 'FOURNISSEUR';
   const orderTransactions = transactions?.filter(t => t.orderId === id) || [];
 
   const updateStatusMutation = useMutation({
@@ -78,7 +79,7 @@ export const OrderDetails: React.FC = () => {
             color: '#1F2937',
             margin: 0
           }}>
-            Commande CMD-{order.id.slice(0,8)}
+            {isSupplier ? 'Bon d\'achat' : 'Commande'} {order.id.slice(0,8)}
           </h1>
         </div>
         <p style={{ 
@@ -339,7 +340,7 @@ export const OrderDetails: React.FC = () => {
           </div>
         </div>
 
-        {/* INFOS CLIENT & PRODUCTION */}
+        {/* INFOS CLIENT OU FOURNISSEUR */}
         <div className="space-y-6">
           <div style={{ 
             backgroundColor: 'white', 
@@ -355,7 +356,8 @@ export const OrderDetails: React.FC = () => {
               alignItems: 'center',
               gap: '0.5rem'
             }}>
-              <User size={14}/> Informations Client
+              {isSupplier ? <TruckIcon size={14} /> : <User size={14} />} 
+              {isSupplier ? 'Informations Fournisseur' : 'Informations Client'}
             </h3>
             <div className="flex items-center gap-3 mb-6">
               <div style={{
@@ -413,7 +415,7 @@ export const OrderDetails: React.FC = () => {
               </div>
             </div>
             
-            <Link to={`/clients/${client?.id}/history`} className="block mt-6">
+            <Link to={`/${isSupplier ? 'suppliers' : 'clients'}/${client?.id}/history`} className="block mt-6">
               <button style={{
                 width: '100%',
                 height: '40px',

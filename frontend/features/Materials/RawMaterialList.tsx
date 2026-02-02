@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { PaymentStatus, RawMaterial } from '../../types';
 
-const UNITS = ['kg', 'g', 'm²', 'cm', 'litre', 'pièce', 'feuille', 'autre'];
+const UNITS = ['kg', 'g', 'm²', 'cm', 'litre', 'pièce', 'plaque', 'autre'];
 
 export const RawMaterialList: React.FC = () => {
   const queryClient = useQueryClient();
@@ -17,7 +17,7 @@ export const RawMaterialList: React.FC = () => {
   const [selectedMaterial, setSelectedMaterial] = useState<RawMaterial | null>(null);
   const [formData, setFormData] = useState({
     name: '',
-    unit: 'pièce',
+    unit: 'plaque',
     stock: 0,
     pricePerUnit: 0,
     supplierId: '' // Ici, cela stockera l'ID du Client
@@ -78,7 +78,7 @@ export const RawMaterialList: React.FC = () => {
     setSelectedMaterial(null);
     setFormData({
       name: '',
-      unit: 'pièce',
+      unit: 'plaque',
       stock: 0,
       pricePerUnit: 0,
       supplierId: ''

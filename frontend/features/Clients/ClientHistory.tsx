@@ -11,7 +11,7 @@ import {
   DollarSign, Package, CreditCard, TrendingUp, AlertCircle, 
   CheckCircle2, Info, Filter, MessageSquare, User, 
   ChevronRight, ArrowUpCircle, ArrowDownCircle, History,
-  Plus, Trash2, Send, Printer
+  Plus, Trash2, Send, Printer, Truck
 } from 'lucide-react';
 
 interface ClientNote {
@@ -59,15 +59,15 @@ export const ClientHistory: React.FC = () => {
     }
   };
 
-
-
   const { data: clients } = useQuery({ queryKey: ['clients'], queryFn: FabriktiService.getClients });
   const { data: orders } = useQuery({ queryKey: ['orders'], queryFn: FabriktiService.getOrders });
   const { data: transactions } = useQuery({ queryKey: ['transactions'], queryFn: FabriktiService.getTransactions });
   const { data: products } = useQuery({ queryKey: ['products'], queryFn: FabriktiService.getProducts });
+  const { data: rawMaterials } = useQuery({ queryKey: ['rawMaterials'], queryFn: FabriktiService.getRawMaterials }); // Pour fournisseurs
 
   const client = clients?.find(c => c.id === id);
-  
+  const isSupplier = (client as any)?.type === 'FOURNISSEUR';
+
   const clientOrders = useMemo(() => orders?.filter(o => o.clientId === id) || [], [orders, id]);
   
   const clientTransactions = useMemo(() => {
@@ -75,21 +75,36 @@ export const ClientHistory: React.FC = () => {
     return transactions.filter(t => t.clientId === id || (t.orderId && clientOrders.some(o => o.id === t.orderId)));
   }, [transactions, id, clientOrders]);
 
-const stats = useMemo(() => {
-  const totalInvoiced = clientOrders.reduce((sum, o) => sum + o.totalPrice, 0);
-  const totalAdvancePayments = clientOrders.reduce((sum, o) => sum + (o.paidAmount || 0), 0);
-  const balance = totalAdvancePayments - totalInvoiced;
-  const averageOrder = clientOrders.length > 0 ? totalInvoiced / clientOrders.length : 0;
-  
-  return {
-    totalInvoiced,
-    totalAdvancePayments,
-    balance,
-    averageOrder,
-    isDebtor: balance < 0,
-    isCreditor: balance > 0
-  };
-}, [clientOrders]);
+  const stats = useMemo(() => {
+    const totalInvoiced = clientOrders.reduce((sum, o) => sum + o.totalPrice, 0);
+    const totalAdvancePayments = clientOrders.reduce((sum, o) => sum + (o.paidAmount || 0), 0);
+    
+    // Flux financiers
+    const totalIncome = clientTransactions
+      .filter(t => t.type === TransactionType.INCOME)
+      .reduce((sum, t) => sum + t.amount, 0);
+      
+    const totalExpense = clientTransactions
+      .filter(t => t.type === TransactionType.EXPENSE)
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    // Formule : Avances - Facturé - Encaissements + Décaissements
+    const balance = totalAdvancePayments - totalInvoiced + totalIncome - totalExpense;
+    
+    const averageOrder = clientOrders.length > 0 ? totalInvoiced / clientOrders.length : 0;
+    
+    return {
+      totalInvoiced,
+      totalAdvancePayments,
+      totalIncome,
+      totalExpense,
+      balance,
+      averageOrder,
+      isDebtor: balance < 0,
+      isCreditor: balance > 0
+    };
+  }, [clientOrders, clientTransactions]);
+
   const timeline = useMemo(() => {
     const combined: any[] = [
       ...clientOrders.map(o => ({ ...o, _type: 'ORDER' })),
@@ -104,11 +119,9 @@ const stats = useMemo(() => {
 
   const filteredTimeline = useMemo(() => {
     return timeline.filter(item => {
-      // Filtre type
       if (filterType === 'orders' && item._type !== 'ORDER') return false;
       if (filterType === 'transactions' && item._type !== 'TRANSACTION') return false;
 
-      // Filtre date
       const itemDate = new Date(item.orderDate || item.date);
       if (dateFrom && itemDate < new Date(dateFrom)) return false;
       if (dateTo && itemDate > new Date(dateTo)) return false;
@@ -143,9 +156,9 @@ const stats = useMemo(() => {
               <h2 className="text-2xl font-semibold text-gray-900">
                 {client.name}
               </h2>
-              <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${(client as any).type === 'FOURNISSEUR' ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700'}`}>
-            {(client as any).type === 'FOURNISSEUR' ? 'Fournisseur' : 'Client'}
-          </span>
+              <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${isSupplier ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700'}`}>
+                {isSupplier ? 'Fournisseur' : 'Client'}
+              </span>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -170,15 +183,13 @@ const stats = useMemo(() => {
 
       {/* Stats financières */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        
-        {/* Total Facturé */}
         <div className="bg-white border border-gray-100 rounded-lg p-5">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center">
-              <ShoppingBag size={18} className="text-white"/>
+              {isSupplier ? <Truck size={18} className="text-white"/> : <ShoppingBag size={18} className="text-white"/>}
             </div>
             <div>
-              <p className="text-xs text-gray-500">Commandes</p>
+              <p className="text-xs text-gray-500">{isSupplier ? 'Achats' : 'Commandes'}</p>
               <p className="text-sm font-semibold text-gray-900">{clientOrders.length} bons</p>
             </div>
           </div>
@@ -186,7 +197,6 @@ const stats = useMemo(() => {
           <p className="text-2xl font-semibold text-gray-900">{stats.totalInvoiced.toLocaleString()} DA</p>
         </div>
 
-        {/* Encaissements */}
         <div className="bg-white border border-gray-100 rounded-lg p-5">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center">
@@ -200,7 +210,7 @@ const stats = useMemo(() => {
           <p className="text-xs text-gray-500 mb-1">Total Reçu</p>
           <p className="text-2xl font-semibold text-emerald-600">{stats.totalAdvancePayments.toLocaleString()} DA</p>
         </div>
-        {/* Solde Client */}
+
         <div className={`rounded-lg p-5 ${stats.balance < 0 ? 'bg-gradient-to-br from-rose-400 to-rose-400' : 'bg-gradient-to-br from-indigo-500 to-indigo-600'}`}>
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center">
@@ -218,7 +228,6 @@ const stats = useMemo(() => {
           </p>
         </div>
 
-        {/* Panier Moyen */}
         <div className="bg-white border border-gray-100 rounded-lg p-5">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
@@ -234,7 +243,6 @@ const stats = useMemo(() => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
         {/* Timeline */}
         <div className="lg:col-span-2 space-y-4">
           <div className="flex items-center justify-between flex-wrap gap-4">
@@ -242,7 +250,6 @@ const stats = useMemo(() => {
               <History size={18} className="text-indigo-600" /> Journal d'Activité
             </h3>
 
-            {/* FILTRE TYPE */}
             <div className="flex gap-2">
               {['all', 'orders', 'transactions'].map(t => (
                 <button 
@@ -252,12 +259,11 @@ const stats = useMemo(() => {
                     filterType === t ? 'bg-indigo-600 text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
                   }`}
                 >
-                  {t === 'all' ? 'Tout' : t === 'orders' ? 'Bons' : 'Flux'}
+                  {t === 'all' ? 'Tout' : t === 'orders' ? (isSupplier ? 'Achats' : 'Bons') : 'Flux'}
                 </button>
               ))}
             </div>
 
-            {/* FILTRE DATE */}
             <div className="flex items-center gap-2">
               <input
                 type="date"
@@ -289,89 +295,87 @@ const stats = useMemo(() => {
                 <p className="text-gray-400 text-sm">Aucun historique disponible</p>
               </div>
             )}
-          {filteredTimeline.map((item, idx) => {
-            const isOrder = item._type === 'ORDER';
-            
-            return (
-              <div key={idx} className="bg-white border border-gray-100 rounded-lg p-4 hover:border-indigo-200 transition-all">
-                <div className="flex items-start gap-4">
-                  {/* Icône */}
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
-                    isOrder 
-                    ? 'bg-blue-50 text-blue-600' 
-                    : (item.type === TransactionType.INCOME ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600')
-                  }`}>
-                    {isOrder ? <Package size={18}/> : <ArrowRightLeft size={18}/>}
-                  </div>
-
-                  {/* Contenu */}
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs text-gray-500">
-                        {new Date(item.orderDate || item.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
-                      </span>
-                      <span className={`px-2 py-0.5 rounded text-xs ${
-                        isOrder 
-                        ? 'bg-blue-50 text-blue-600' 
-                        : (item.type === TransactionType.INCOME ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600')
-                      }`}>
-                        {isOrder ? 'Bon de Commande' : (item.type === TransactionType.INCOME ? 'Encaissement' : 'Décaissement')}
-                      </span>
+            {filteredTimeline.map((item, idx) => {
+              const isOrder = item._type === 'ORDER';
+              
+              return (
+                <div key={idx} className="bg-white border border-gray-100 rounded-lg p-4 hover:border-indigo-200 transition-all">
+                  <div className="flex items-start gap-4">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
+                      isOrder 
+                      ? 'bg-blue-50 text-blue-600' 
+                      : (item.type === TransactionType.INCOME ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600')
+                    }`}>
+                      {isOrder ? (isSupplier ? <Truck size={18}/> : <Package size={18}/>) : <ArrowRightLeft size={18}/>}
                     </div>
-                    <h4 className="text-sm font-semibold text-gray-900 mb-1">
-                      {isOrder ? `Commande CMD-${item.id.slice(0,5)}` : item.description}
-                    </h4>
-                    {isOrder && (
-                      <div className="text-xs text-gray-500 space-y-1">
-                        <p>
-                          {item.items?.length || 0} articles • Statut : {item.status}
-                        </p>
-                        {item.paidAmount > 0 && (
-                          <p className="text-emerald-600 font-medium">
-                            Versement: <span className="font-bold">+{item.paidAmount.toLocaleString()} DA</span>
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </div>
 
-                  {/* Montant */}
-                  <div className="text-right">
-                    <p className={`text-lg font-semibold ${isOrder ? 'text-gray-900' : (item.type === TransactionType.INCOME ? 'text-emerald-600' : 'text-rose-600')}`}>
-                      {isOrder 
-                        ? `${item.totalPrice.toLocaleString()} DA` 
-                        : `${item.type === TransactionType.INCOME ? '+' : '-'}${item.amount.toLocaleString()} DA`}
-                    </p>
-                    {isOrder && item.paidAmount > 0 && (
-                      <p className="text-xs text-red-600 mt-1">
-                        Reste: {(item.totalPrice - item.paidAmount).toLocaleString()} DA
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs text-gray-500">
+                          {new Date(item.orderDate || item.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                        </span>
+                        <span className={`px-2 py-0.5 rounded text-xs ${
+                          isOrder 
+                          ? 'bg-blue-50 text-blue-600' 
+                          : (item.type === TransactionType.INCOME ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600')
+                        }`}>
+                          {isOrder 
+                            ? (isSupplier ? 'Bon d\'Achat' : 'Bon de Commande') 
+                            : (item.type === TransactionType.INCOME ? 'Encaissement' : 'Décaissement')}
+                        </span>
+                      </div>
+                      <h4 className="text-sm font-semibold text-gray-900 mb-1">
+                        {isOrder 
+                          ? (isSupplier ? `Achat ACH-${item.id.slice(0,5)}` : `Commande CMD-${item.id.slice(0,5)}`) 
+                          : item.description}
+                      </h4>
+                      {isOrder && (
+                        <div className="text-xs text-gray-500 space-y-1">
+                          <p>
+                            {item.items?.length || 0} articles • Statut : {item.status}
+                          </p>
+                          {item.paidAmount > 0 && (
+                            <p className="text-emerald-600 font-medium">
+                              Versement: <span className="font-bold">+{item.paidAmount.toLocaleString()} DA</span>
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="text-right">
+                      <p className={`text-lg font-semibold ${isOrder ? 'text-gray-900' : (item.type === TransactionType.INCOME ? 'text-emerald-600' : 'text-rose-600')}`}>
+                        {isOrder 
+                          ? `${item.totalPrice.toLocaleString()} DA` 
+                          : `${item.type === TransactionType.INCOME ? '+' : '-'}${item.amount.toLocaleString()} DA`}
                       </p>
-                    )}
-                    {isOrder && (
-                      <Link to={`/orders/${item.id}`}>
-                        <button className="flex items-center gap-1 text-xs text-indigo-600 hover:underline mt-1 print:hidden">
-                          Détails <ChevronRight size={12}/>
-                        </button>
-                      </Link>
-                    )}
+                      {isOrder && item.paidAmount > 0 && (
+                        <p className="text-xs text-red-600 mt-1">
+                          Reste: {(item.totalPrice - item.paidAmount).toLocaleString()} DA
+                        </p>
+                      )}
+                      {isOrder && (
+                        <Link to={`/orders/${item.id}`}>
+                          <button className="flex items-center gap-1 text-xs text-indigo-600 hover:underline mt-1 print:hidden">
+                            Détails <ChevronRight size={12}/>
+                          </button>
+                        </Link>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
           </div>
         </div>
 
         {/* Sidebar */}
         <div className="space-y-4">
-          
-          {/* Notes */}
           <div className="bg-white border border-gray-100 rounded-lg p-5">
             <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
               <MessageSquare size={16} className="text-indigo-600" /> Notes de gestion
             </h3>
             
-            {/* Saisie */}
             <div className="relative mb-4 print:hidden">
               <textarea 
                 className="w-full h-24 p-3 bg-gray-50 rounded-lg border border-gray-200 text-sm text-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-300 outline-none resize-none transition-all"
@@ -393,7 +397,6 @@ const stats = useMemo(() => {
               </button>
             </div>
 
-            {/* Liste des notes */}
             <div className="space-y-2 max-h-[300px] overflow-y-auto">
               {notes.length === 0 ? (
                 <p className="text-center py-4 text-xs text-gray-400">Aucune note enregistrée</p>
@@ -418,7 +421,6 @@ const stats = useMemo(() => {
             </div>
           </div>
 
-          {/* Coordonnées */}
           <div className="bg-white border border-gray-100 rounded-lg p-5">
             <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
               <Info size={16} className="text-indigo-600" /> Informations
@@ -435,10 +437,10 @@ const stats = useMemo(() => {
               </div>
               <div className="flex items-start gap-3">
                 <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0">
-                  <Package size={14} className="text-emerald-600"/>
+                  {isSupplier ? <Truck size={14} className="text-emerald-600"/> : <Package size={14} className="text-emerald-600"/>}
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">Dernière Commande</p>
+                  <p className="text-xs text-gray-500">{isSupplier ? 'Dernier Achat' : 'Dernière Commande'}</p>
                   <p className="text-sm font-medium text-gray-900">
                     {clientOrders.length > 0 ? new Date(clientOrders[0].orderDate).toLocaleDateString() : 'N/A'}
                   </p>
@@ -447,7 +449,6 @@ const stats = useMemo(() => {
             </div>
           </div>
 
-          {/* Alerte Dette */}
           {stats.balance < -1000 && (
             <div className="p-4 bg-rose-50 border border-rose-200 rounded-lg">
               <div className="flex items-center gap-2 mb-2">
@@ -455,7 +456,7 @@ const stats = useMemo(() => {
                 <h4 className="font-semibold text-sm text-rose-900">Alerte Débiteur</h4>
               </div>
               <p className="text-xs text-rose-700 leading-relaxed">
-                Ce client a dépassé le seuil de tolérance de crédit. Il est conseillé de bloquer les nouvelles commandes avant régularisation.
+                Ce {isSupplier ? 'fournisseur' : 'client'} a dépassé le seuil de tolérance de crédit. Il est conseillé de bloquer les nouvelles commandes avant régularisation.
               </p>
             </div>
           )}

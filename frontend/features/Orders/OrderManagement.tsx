@@ -90,10 +90,18 @@ export const OrderManagement: React.FC = () => {
 
   const [items, setItems] = useState<Partial<OrderItem>[]>([{ id: '1', productId: '', quantity: 1, unit: 'paire', unitPrice: 0, totalItemPrice: 0}]);
   const [advancePayment, setAdvancePayment] = useState<number>(0);
+  const [selectedClientId, setSelectedClientId] = useState<string>(''); // Nouvel état pour le client sélectionné
 
   const { data: orders, isLoading } = useQuery({ queryKey: ['orders'], queryFn: FabriktiService.getOrders });
   const { data: clients } = useQuery({ queryKey: ['clients'], queryFn: FabriktiService.getClients });
   const { data: products } = useQuery({ queryKey: ['products'], queryFn: FabriktiService.getProducts });
+  const { data: materials } = useQuery({ queryKey: ['materials'], queryFn: FabriktiService.getRawMaterials }); // Récupération des matières premières
+
+  // Déterminer si le client sélectionné est un fournisseur
+  const isSupplier = useMemo(() => {
+    const client = clients?.find(c => c.id === selectedClientId);
+    return client?.type === 'FOURNISSEUR';
+  }, [selectedClientId, clients]);
 
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
@@ -117,6 +125,7 @@ export const OrderManagement: React.FC = () => {
 
   const handleOpenCreate = () => {
     setEditingOrder(null);
+    setSelectedClientId(''); // Réinitialiser le client sélectionné
     setItems([{ id: '1', productId: '', quantity: 1, unit: 'paire', unitPrice: 0, totalItemPrice: 0}]);
     setAdvancePayment(0);
     setIsModalOpen(true);
@@ -124,6 +133,7 @@ export const OrderManagement: React.FC = () => {
 
   const handleOpenEdit = (order: Order) => {
     setEditingOrder(order);
+    setSelectedClientId(order.clientId); // Mettre à jour le client sélectionné
     setItems(order.items || []);
     setAdvancePayment(order.paidAmount || 0);
     setIsModalOpen(true);
@@ -138,6 +148,7 @@ export const OrderManagement: React.FC = () => {
     setIsModalOpen(false);
     setEditingOrder(null);
     setAdvancePayment(0);
+    setSelectedClientId(''); // Réinitialiser le client sélectionné
   };
 
   const openDetailsModal = (order: Order) => {
@@ -163,9 +174,11 @@ export const OrderManagement: React.FC = () => {
       if (item.id === id) {
         const updated = { ...item, [field]: value };
         if (field === 'productId') {
-          const product = products?.find(p => p.id === value);
+          // Sélectionner dans la bonne liste selon le type de client
+          const sourceList = isSupplier ? materials : products;
+          const product = sourceList?.find(p => p.id === value);
           updated.unit = product?.unit || 'unité';
-          updated.unitPrice = product?.pricePerUnit || 0;
+          updated.unitPrice = (product as any)?.pricePerUnit || 0;
         }
         updated.totalItemPrice = (updated.quantity || 0) * (updated.unitPrice || 0);
         return updated;
@@ -511,11 +524,16 @@ export const OrderManagement: React.FC = () => {
                   <select
                     name="clientId"
                     required
-                    defaultValue={editingOrder?.clientId || ''}
+                    value={selectedClientId}
+                    onChange={(e) => setSelectedClientId(e.target.value)}
                     className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none text-sm"
                   >
                     <option value="">Sélectionner un client</option>
-                    {clients?.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    {clients?.map(c => (
+                      <option key={c.id} value={c.id}>
+                        {c.name} ({c.type === 'FOURNISSEUR' ? 'Fournisseur' : 'Client'})
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div>
@@ -551,29 +569,13 @@ export const OrderManagement: React.FC = () => {
                 </select>
               </div>
 
-              {/* Advance Payment */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Versement</label>
-                <div className="relative">
-                  <DollarSign size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <input 
-                    type="number" 
-                    step="1" 
-                    value={advancePayment}
-                    onChange={(e) => setAdvancePayment(parseFloat(e.target.value) || 0)}
-                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
-                    placeholder="10 000 DA"
-                  />
-                </div>
-                <div className="mt-2 text-sm text-slate-600">
-                  Reste à payer: <span className="font-semibold">{remainingAmount.toLocaleString()} DA</span>
-                </div>
-              </div>
 
               {/* Items */}
               <div>
                 <div className="flex justify-between items-center mb-3">
-                  <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider">Articles</label>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    {isSupplier ? 'Matières premières' : 'Articles'}
+                  </label>
                   <button
                     type="button"
                     onClick={addLine}
@@ -592,8 +594,13 @@ export const OrderManagement: React.FC = () => {
                           onChange={(e) => updateLine(item.id!, 'productId', e.target.value)}
                           className="px-2 py-1.5 rounded border border-slate-200 text-sm outline-none focus:border-indigo-500"
                         >
-                          <option value="">Produit</option>
-                          {products?.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                          <option value="">
+                            {isSupplier ? 'Sélectionner une matière première' : 'Sélectionner un produit'}
+                          </option>
+                          {isSupplier
+                            ? materials?.map(m => <option key={m.id} value={m.id}>{m.name}</option>)
+                            : products?.map(p => <option key={p.id} value={p.id}>{p.name}</option>)
+                          }
                         </select>
                         <input
                           type="number"
@@ -632,16 +639,24 @@ export const OrderManagement: React.FC = () => {
                     </div>
                   ))}
                 </div>
-                <div className="mt-3 flex justify-end">
-                  <div className="px-4 py-2 bg-indigo-50 rounded-lg mr-2">
-                    <span className="text-xs font-semibold text-indigo-900 uppercase tracking-wider mr-2">Total:</span>
-                    <span className="text-lg font-bold text-indigo-600">{totalOrderPrice.toLocaleString()} DA</span>
-                  </div>
-                    <div className="px-4 py-2 bg-rose-50 rounded-lg">
-                    <span className="text-xs font-semibold text-rose-900 uppercase tracking-wider mr-2">Reste à payer:</span>
-                    <span className="text-lg font-bold text-rose-600">{remainingAmount.toLocaleString()} DA</span>
-                  </div>
+
+              </div>
+
+              {/* Advance Payment */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Versement</label>
+                <div className="relative">
+                  <DollarSign size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input 
+                    type="number" 
+                    step="1" 
+                    value={advancePayment}
+                    onChange={(e) => setAdvancePayment(parseFloat(e.target.value) || 0)}
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                    placeholder="10 000 DA"
+                  />
                 </div>
+
               </div>
 
               {/* Notes */}
@@ -655,7 +670,16 @@ export const OrderManagement: React.FC = () => {
                   className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none text-sm resize-none"
                 />
               </div>
-
+                <div className="mt-3 flex justify-end">
+                  <div className="px-4 py-2 bg-indigo-50 rounded-lg mr-2">
+                    <span className="text-xs font-semibold text-indigo-900 uppercase tracking-wider mr-2">Total:</span>
+                    <span className="text-lg font-bold text-indigo-600">{totalOrderPrice.toLocaleString()} DA</span>
+                  </div>
+                    <div className="px-4 py-2 bg-rose-50 rounded-lg">
+                    <span className="text-xs font-semibold text-rose-900 uppercase tracking-wider mr-2">Reste à payer:</span>
+                    <span className="text-lg font-bold text-rose-600">{remainingAmount.toLocaleString()} DA</span>
+                  </div>
+                </div>
               {/* Actions */}
               <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
                 <button

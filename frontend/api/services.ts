@@ -33,15 +33,20 @@ const initDB = () => {
       { id: 'c2', name: 'SportPerformance SA', email: 'orders@sportperf.fr', phone: '0450607080', address: 'ZA les montagnes, Annecy', providedProducts: [] }
     ]);
     storage.write('materials', [
-      { id: 'm1', name: 'Sendem', unit: 'm2', stock: 80, paymentStatus: PaymentStatus.PARTIEL, pricePerUnit: 18, supplierId: 's1' },
-      { id: 'm2', name: 'Colle IUY7U', unit: 'kg', stock: 80, paymentStatus: PaymentStatus.PARTIEL, pricePerUnit: 18, supplierId: 's1' },
-      { id: 'm3', name: 'Mousse EVA 40 Shore', unit: 'm2', stock: 150, paymentStatus: PaymentStatus.PAYEE, pricePerUnit: 25, supplierId: 's1' },
-      { id: 'm4', name: 'Résine Thermoplastique', unit: 'kg', stock: 50, paymentStatus: PaymentStatus.PAYEE, pricePerUnit: 45, supplierId: 's1' },
-      { id: 'm5', name: 'Cuir Doublure', unit: 'm2', stock: 80, paymentStatus: PaymentStatus.PARTIEL, pricePerUnit: 18, supplierId: 's1' },
+      { id: 'm1', name: 'Synderme', unit: 'plaque', stock: 80, paymentStatus: PaymentStatus.PARTIEL, pricePerUnit: 18, supplierId: 's1' },
+      { id: 'm2', name: 'Bartoli', unit: 'plaque', stock: 80, paymentStatus: PaymentStatus.PARTIEL, pricePerUnit: 18, supplierId: 's1' },
+      { id: 'm3', name: 'Tucson', unit: 'plaque', stock: 150, paymentStatus: PaymentStatus.PAYEE, pricePerUnit: 25, supplierId: 's1' },
+      { id: 'm4', name: 'Néo', unit: 'plaque', stock: 50, paymentStatus: PaymentStatus.PAYEE, pricePerUnit: 45, supplierId: 's1' },
+      { id: 'm5', name: 'Cambrillon', unit: 'paire', stock: 80, paymentStatus: PaymentStatus.PARTIEL, pricePerUnit: 18, supplierId: 's1' },
+      { id: 'm5', name: 'Colle première', unit: 'kg', stock: 80, paymentStatus: PaymentStatus.PARTIEL, pricePerUnit: 18, supplierId: 's1' },
+      { id: 'm5', name: 'Colle semelle', unit: 'kg', stock: 80, paymentStatus: PaymentStatus.PARTIEL, pricePerUnit: 18, supplierId: 's1' },
     ]);
     storage.write('products', [
-      { id: 'p1', name: 'Semelle Sport Gel G1', category: 'Semelle', unit: 'paire', pricePerUnit: 12.50, consumptionFormula: [{ materialId: 'm1', quantity: 0.05 }, { materialId: 'm2', quantity: 0.1 }] },
-      { id: 'p2', name: 'Orthèse Plantaire Confort', category: 'Semelle', unit: 'paire', pricePerUnit: 45.00, consumptionFormula: [{ materialId: 'm1', quantity: 0.08 }, { materialId: 'm3', quantity: 0.05 }] }
+      { id: 'p1', name: 'ref1', category: 'Première doublé', unit: 'paire', pricePerUnit: 12.50, consumptionFormula: [{ materialId: 'm1', quantity: 0.05 }, { materialId: 'm2', quantity: 0.1 }] },
+      { id: 'p2', name: 'ref2', category: 'Première tucson', unit: 'paire', pricePerUnit: 45.00, consumptionFormula: [{ materialId: 'm1', quantity: 0.08 }, { materialId: 'm3', quantity: 0.05 }] },
+      { id: 'p2', name: 'ref3', category: 'Première synderme', unit: 'paire', pricePerUnit: 45.00, consumptionFormula: [{ materialId: 'm1', quantity: 0.08 }, { materialId: 'm3', quantity: 0.05 }] },
+      { id: 'p2', name: 'ref4', category: 'Semelle néo', unit: 'paire', pricePerUnit: 45.00, consumptionFormula: [{ materialId: 'm1', quantity: 0.08 }, { materialId: 'm3', quantity: 0.05 }] },
+      { id: 'p2', name: 'ref5', category: 'Semelle injecté', unit: 'paire', pricePerUnit: 45.00, consumptionFormula: [{ materialId: 'm1', quantity: 0.08 }, { materialId: 'm3', quantity: 0.05 }] },
     ]);
     storage.write('machines', [
       { id: 'mch1', name: 'Thermoformeuse T-1000', status: 'operational', lastMaintenance: '2024-02-15', interventions: [] },
