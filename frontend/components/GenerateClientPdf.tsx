@@ -335,4 +335,5 @@ function App() {
   );
 }
 
-App;
+
+export default GenerateClientPdf;
