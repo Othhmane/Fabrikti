@@ -1,13 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { FabriktiService } from '../../api/services';
 import { 
   Search, Plus, Layers, Truck, Edit, Trash2, 
   X, AlertTriangle, Info, Package, User 
 } from 'lucide-react';
+import { supabase } from '../../api/supabase'; // adapte le chemin si besoin
 import { PaymentStatus, RawMaterial } from '../../types';
 
-const UNITS = ['kg', 'g', 'm²', 'cm', 'litre', 'pièce', 'plaque', 'autre'];
+const UNITS = ['kg', 'g', 'm²', 'cm', 'litre', 'pièce', 'plaque', 'paire', 'autre'];
 
 export const RawMaterialList: React.FC = () => {
   const queryClient = useQueryClient();
@@ -20,30 +20,69 @@ export const RawMaterialList: React.FC = () => {
     unit: 'plaque',
     stock: 0,
     pricePerUnit: 0,
-    supplierId: '' // Ici, cela stockera l'ID du Client
+    supplierId: ''
   });
 
-  const { data: materials, isLoading } = useQuery({ 
-    queryKey: ['materials'], 
-    queryFn: FabriktiService.getRawMaterials 
+  // Récupérer les matières premières
+  const { data: materials, isLoading } = useQuery({
+    queryKey: ['materials'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('materials').select('*').order('name');
+      if (error) throw error;
+      return data;
+    }
   });
 
-  // ON RÉCUPÈRE LES CLIENTS AU LIEU DES FOURNISSEURS
-  const { data: clients } = useQuery({ 
-    queryKey: ['clients'], 
-    queryFn: FabriktiService.getClients 
+  // Récupérer les clients (fournisseurs)
+  const { data: clients } = useQuery({
+    queryKey: ['clients'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('clients').select('*').order('name');
+      if (error) throw error;
+      return data;
+    }
   });
 
+  // Mutation sauvegarde (insert ou update)
   const saveMutation = useMutation({
-    mutationFn: (data: Partial<RawMaterial>) => FabriktiService.saveRawMaterial(data),
+    mutationFn: async (data: Partial<RawMaterial>) => {
+      if (data.id) {
+        const { error } = await supabase
+          .from('materials')
+          .update({
+            name: data.name,
+            unit: data.unit,
+            stock: data.stock,
+            price_per_unit: data.pricePerUnit,
+            supplier_id: data.supplierId
+          })
+          .eq('id', data.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('materials')
+          .insert([{
+            name: data.name,
+            unit: data.unit,
+            stock: data.stock,
+            price_per_unit: data.pricePerUnit,
+            supplier_id: data.supplierId
+          }]);
+        if (error) throw error;
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['materials'] });
       closeFormModal();
     }
   });
 
+  // Mutation suppression
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => FabriktiService.delete('materials', id),
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('materials').delete().eq('id', id);
+      if (error) throw error;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['materials'] });
       setIsDeleteModalOpen(false);
@@ -64,7 +103,7 @@ export const RawMaterialList: React.FC = () => {
     } else {
       setFormData({
         name: '',
-        unit: 'pièce',
+        unit: 'plaque',
         stock: 0,
         pricePerUnit: 0,
         supplierId: ''
@@ -277,16 +316,16 @@ export const RawMaterialList: React.FC = () => {
                     <button type="button" onClick={closeFormModal} className="flex-1 px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl text-sm font-semibold hover:bg-slate-200 transition-all">
                       Annuler
                     </button>
-                    <button type="submit" disabled={saveMutation.isPending} className="flex-1 px-4 py-2.5 bg-[#6366F1] text-white rounded-xl text-sm font-semibold hover:bg-[#5558E3] transition-all">
-                      {saveMutation.isPending ? 'Enregistrement...' : 'Enregistrer'}
+                    <button type="submit" disabled={saveMutation.isLoading} className="flex-1 px-4 py-2.5 bg-[#6366F1] text-white rounded-xl text-sm font-semibold hover:bg-[#5558E3] transition-all">
+                      {saveMutation.isLoading ? 'Enregistrement...' : 'Enregistrer'}
                     </button>
                   </div>
                 </form>
               </div>
             </div>
           )}
-          
-          {/* MODAL SUPPRESSION (Inchangé) */}
+
+          {/* MODAL SUPPRESSION */}
           {isDeleteModalOpen && selectedMaterial && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
               <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 text-center">

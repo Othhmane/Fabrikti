@@ -1,9 +1,9 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { FabriktiService } from '../../api/services';
+import { supabase } from '../../api/supabase';
 import { Card, Badge, Button, Input } from '../../components/UI';
-import { TransactionType, PaymentStatus, Order, Transaction } from '../../types';
+import { TransactionType, PaymentStatus, Order as OrderType, Transaction as TransactionTypeDef } from '../../types';
 import GenerateClientPdf from '../../components/GenerateClientPdf';
 
 import { 
@@ -29,7 +29,9 @@ export const ClientHistory: React.FC = () => {
   const [notes, setNotes] = useState<ClientNote[]>([]);
   const [newNoteText, setNewNoteText] = useState('');
 
+  // Notes en localStorage
   useEffect(() => {
+    if (!id) return;
     const savedNotes = localStorage.getItem(`fabrikti_client_notes_${id}`);
     if (savedNotes) {
       setNotes(JSON.parse(savedNotes));
@@ -37,6 +39,7 @@ export const ClientHistory: React.FC = () => {
   }, [id]);
 
   const saveNotesToStorage = (updatedNotes: ClientNote[]) => {
+    if (!id) return;
     localStorage.setItem(`fabrikti_client_notes_${id}`, JSON.stringify(updatedNotes));
     setNotes(updatedNotes);
   };
@@ -59,38 +62,115 @@ export const ClientHistory: React.FC = () => {
     }
   };
 
-  const { data: clients } = useQuery({ queryKey: ['clients'], queryFn: FabriktiService.getClients });
-  const { data: orders } = useQuery({ queryKey: ['orders'], queryFn: FabriktiService.getOrders });
-  const { data: transactions } = useQuery({ queryKey: ['transactions'], queryFn: FabriktiService.getTransactions });
-  const { data: products } = useQuery({ queryKey: ['products'], queryFn: FabriktiService.getProducts });
-  const { data: rawMaterials } = useQuery({ queryKey: ['rawMaterials'], queryFn: FabriktiService.getRawMaterials }); // Pour fournisseurs
+  // Fetch clients / orders / transactions / products / rawMaterials via supabase
+  const fetchClients = async () => {
+    const { data, error } = await supabase
+      .from('clients')
+      .select('*');
+    if (error) throw error;
+    return data || [];
+  };
 
-  const client = clients?.find(c => c.id === id);
+  const fetchOrders = async () => {
+    // si tu as une relation order_items, tu peux remplacer select('*') par select('*, order_items(*)')
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  };
+
+  const fetchTransactions = async () => {
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('*')
+      .order('date', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  };
+
+  const fetchProducts = async () => {
+    const { data, error } = await supabase.from('products').select('*');
+    if (error) throw error;
+    return data || [];
+  };
+
+  const fetchRawMaterials = async () => {
+    const { data, error } = await supabase.from('materials').select('*');
+    if (error) throw error;
+    return data || [];
+  };
+
+  const { data: clients = [] } = useQuery({ queryKey: ['clients'], queryFn: fetchClients });
+  const { data: ordersRaw = [] } = useQuery({ queryKey: ['orders'], queryFn: fetchOrders });
+  const { data: transactionsRaw = [] } = useQuery({ queryKey: ['transactions'], queryFn: fetchTransactions });
+  const { data: products = [] } = useQuery({ queryKey: ['products'], queryFn: fetchProducts });
+  const { data: rawMaterials = [] } = useQuery({ queryKey: ['rawMaterials'], queryFn: fetchRawMaterials });
+
+  // Mappe les rows SQL (snake_case) vers la forme JS attendue par ta page
+  const orders = useMemo(() => {
+    return (ordersRaw || []).map((r: any) => ({
+      id: r.id,
+      clientId: r.client_id ?? r.clientId ?? r.client,
+      totalPrice: r.total_price ?? r.totalAmount ?? r.total_amount ?? r.totalPrice ?? 0,
+      paidAmount: r.paid_amount ?? r.paidAmount ?? r.paid_amount ?? 0,
+      orderDate: r.order_date ?? r.created_at ?? r.orderDate ?? null,
+      items: r.items ?? r.order_items ?? r.items_list ?? [],
+      status: r.status ?? r.state ?? null,
+      // tu peux mapper d'autres champs si besoin
+    })) as OrderType[];
+  }, [ordersRaw]);
+
+  const transactions = useMemo(() => {
+    return (transactionsRaw || []).map((t: any) => ({
+      id: t.id,
+      clientId: t.client_id ?? t.clientId ?? null,
+      orderId: t.order_id ?? t.orderId ?? null,
+      supplierId: t.supplier_id ?? t.supplierId ?? null,
+      materialId: t.material_id ?? t.materialId ?? null,
+      type: t.type,
+      amount: Number(t.amount ?? 0),
+      date: t.date ?? t.created_at ?? null,
+      description: t.description ?? t.label ?? '',
+      payment_method: t.payment_method ?? t.paymentMethod ?? null,
+      reference: t.reference ?? null,
+      notes: t.notes ?? null,
+      category: t.category ?? null,
+      status: t.status ?? null,
+    })) as TransactionTypeDef[];
+  }, [transactionsRaw]);
+
+  const client = useMemo(() => clients.find((c: any) => c.id === id), [clients, id]);
   const isSupplier = (client as any)?.type === 'FOURNISSEUR';
 
-  const clientOrders = useMemo(() => orders?.filter(o => o.clientId === id) || [], [orders, id]);
-  
+  const clientOrders = useMemo(() => {
+    if (!id) return [];
+    return orders.filter(o => o.clientId === id);
+  }, [orders, id]);
+
   const clientTransactions = useMemo(() => {
-    if (!transactions) return [];
-    return transactions.filter(t => t.clientId === id || (t.orderId && clientOrders.some(o => o.id === t.orderId)));
+    if (!id) return [];
+    // Inclut transactions directement liées au client ou via commande du client
+    return transactions.filter(t => 
+      t.clientId === id || (t.orderId && clientOrders.some(o => o.id === t.orderId))
+    );
   }, [transactions, id, clientOrders]);
 
+  // Stats
   const stats = useMemo(() => {
-    const totalInvoiced = clientOrders.reduce((sum, o) => sum + o.totalPrice, 0);
-    const totalAdvancePayments = clientOrders.reduce((sum, o) => sum + (o.paidAmount || 0), 0);
+    const totalInvoiced = clientOrders.reduce((sum, o) => sum + (Number(o.totalPrice) || 0), 0);
+    const totalAdvancePayments = clientOrders.reduce((sum, o) => sum + (Number(o.paidAmount) || 0), 0);
     
-    // Flux financiers
     const totalIncome = clientTransactions
       .filter(t => t.type === TransactionType.INCOME)
-      .reduce((sum, t) => sum + t.amount, 0);
+      .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
       
     const totalExpense = clientTransactions
       .filter(t => t.type === TransactionType.EXPENSE)
-      .reduce((sum, t) => sum + t.amount, 0);
+      .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
-    // Formule : Avances - Facturé - Encaissements + Décaissements
     const balance = totalAdvancePayments - totalInvoiced + totalIncome - totalExpense;
-    
     const averageOrder = clientOrders.length > 0 ? totalInvoiced / clientOrders.length : 0;
     
     return {
@@ -105,14 +185,15 @@ export const ClientHistory: React.FC = () => {
     };
   }, [clientOrders, clientTransactions]);
 
+  // Timeline combinée (commandes + transactions)
   const timeline = useMemo(() => {
     const combined: any[] = [
       ...clientOrders.map(o => ({ ...o, _type: 'ORDER' })),
       ...clientTransactions.map(t => ({ ...t, _type: 'TRANSACTION' }))
     ];
     return combined.sort((a, b) => {
-      const dateA = new Date(a.orderDate || a.date).getTime();
-      const dateB = new Date(b.orderDate || b.date).getTime();
+      const dateA = new Date(a.orderDate || a.date || 0).getTime();
+      const dateB = new Date(b.orderDate || b.date || 0).getTime();
       return dateB - dateA;
     });
   }, [clientOrders, clientTransactions]);
@@ -122,7 +203,7 @@ export const ClientHistory: React.FC = () => {
       if (filterType === 'orders' && item._type !== 'ORDER') return false;
       if (filterType === 'transactions' && item._type !== 'TRANSACTION') return false;
 
-      const itemDate = new Date(item.orderDate || item.date);
+      const itemDate = new Date(item.orderDate || item.date || 0);
       if (dateFrom && itemDate < new Date(dateFrom)) return false;
       if (dateTo && itemDate > new Date(dateTo)) return false;
 
@@ -326,7 +407,7 @@ export const ClientHistory: React.FC = () => {
                       </div>
                       <h4 className="text-sm font-semibold text-gray-900 mb-1">
                         {isOrder 
-                          ? (isSupplier ? `Achat ACH-${item.id.slice(0,5)}` : `Commande CMD-${item.id.slice(0,5)}`) 
+                          ? (isSupplier ? `Achat ACH-${String(item.id).slice(0,5)}` : `Commande CMD-${String(item.id).slice(0,5)}`) 
                           : item.description}
                       </h4>
                       {isOrder && (
@@ -346,21 +427,21 @@ export const ClientHistory: React.FC = () => {
                     <div className="text-right">
                       <p className={`text-lg font-semibold ${isOrder ? 'text-gray-900' : (item.type === TransactionType.INCOME ? 'text-emerald-600' : 'text-rose-600')}`}>
                         {isOrder 
-                          ? `${item.totalPrice.toLocaleString()} DA` 
-                          : `${item.type === TransactionType.INCOME ? '+' : '-'}${item.amount.toLocaleString()} DA`}
+                          ? `${Number(item.totalPrice || 0).toLocaleString()} DA` 
+                          : `${item.type === TransactionType.INCOME ? '+' : '-'}${Number(item.amount || 0).toLocaleString()} DA`}
                       </p>
                       {isOrder && item.paidAmount > 0 && (
                         <p className="text-xs text-red-600 mt-1">
-                          Reste: {(item.totalPrice - item.paidAmount).toLocaleString()} DA
+                          Reste: {(Number(item.totalPrice || 0) - Number(item.paidAmount || 0)).toLocaleString()} DA
                         </p>
                       )}
-                      {isOrder && (
-                        <Link to={`/orders/${item.id}`}>
-                          <button className="flex items-center gap-1 text-xs text-indigo-600 hover:underline mt-1 print:hidden">
-                            Détails <ChevronRight size={12}/>
-                          </button>
-                        </Link>
-                      )}
+                        {isOrder && (
+                          <Link to={`/orders/${item.id}`}>
+                            <button className="flex items-center gap-1 text-xs text-indigo-600 hover:underline mt-1 print:hidden">
+                              Détails <ChevronRight size={12}/>
+                            </button>
+                          </Link>
+                        )}  
                     </div>
                   </div>
                 </div>
@@ -442,7 +523,7 @@ export const ClientHistory: React.FC = () => {
                 <div>
                   <p className="text-xs text-gray-500">{isSupplier ? 'Dernier Achat' : 'Dernière Commande'}</p>
                   <p className="text-sm font-medium text-gray-900">
-                    {clientOrders.length > 0 ? new Date(clientOrders[0].orderDate).toLocaleDateString() : 'N/A'}
+                    {clientOrders.length > 0 && clientOrders[0].orderDate ? new Date(clientOrders[0].orderDate).toLocaleDateString() : 'N/A'}
                   </p>
                 </div>
               </div>

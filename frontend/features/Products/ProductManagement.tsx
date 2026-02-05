@@ -3,15 +3,15 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { FabriktiService } from '../../api/services';
 import { Card, Button, Input } from '../../components/UI';
 import {
   Search, Plus, Edit, Trash2, X, Package,
   AlertTriangle, Info, Tag, DollarSign, Database
 } from 'lucide-react';
 import { ProductConsumption } from '../../types';
+import { supabase } from '../../api/supabase'; // <-- adapte le chemin si nécessaire
 
-const CATEGORIES = ['Semelle', 'Semelle Neo','Semelle injecté ', 'Première'];
+const CATEGORIES = ['Semelle', 'Semelle neo','Semelle injectée ','Première', 'Première doublée','Première tucson','Première synderme'];
 const UNITS = ['paire', 'feuille', 'unité', 'm²', 'cm', 'kg', 'litre'];
 
 const productSchema = z.object({
@@ -32,27 +32,154 @@ export const ProductManagement: React.FC = () => {
   const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
   const [formula, setFormula] = useState<ProductConsumption[]>([]);
 
-  const { data: products, isLoading } = useQuery({ queryKey: ['products'], queryFn: FabriktiService.getProducts });
-  const { data: materials } = useQuery({ queryKey: ['materials'], queryFn: FabriktiService.getRawMaterials });
-
-  const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<ProductFormData>({
+  const {
+    register, handleSubmit, reset, setValue, formState: { errors }
+  } = useForm<ProductFormData>({
     resolver: zodResolver(productSchema)
   });
 
+  // Fetch products with their consumption formula
+  const { data: products, isLoading } = useQuery({
+    queryKey: ['products'],
+    queryFn: async () => {
+      // products
+      const { data: productsData, error: pErr } = await supabase
+        .from('products')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (pErr) throw pErr;
+
+      // product_consumption
+      const { data: pcData, error: pcErr } = await supabase
+        .from('product_consumption')
+        .select('*');
+      if (pcErr) throw pcErr;
+
+      // materials map (to display names in details; component already queries materials separately but keep mapping)
+      const { data: materialsData, error: mErr } = await supabase
+        .from('materials')
+        .select('*');
+      if (mErr) throw mErr;
+
+      const consumptionsByProduct: Record<string, ProductConsumption[]> = {};
+      pcData?.forEach((c: any) => {
+        if (!consumptionsByProduct[c.product_id]) consumptionsByProduct[c.product_id] = [];
+        consumptionsByProduct[c.product_id].push({
+          materialId: c.material_id,
+          quantity: c.quantity
+        });
+      });
+
+      return (productsData || []).map((p: any) => ({
+        ...p,
+        // map DB snake_case -> UI camelCase
+        pricePerUnit: p.price_per_unit,
+        consumptionFormula: consumptionsByProduct[p.id] || []
+      }));
+    }
+  });
+
+  // Fetch materials
+  const { data: materials } = useQuery({
+    queryKey: ['materials'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('materials').select('*').order('name');
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  // Save (create or update) product + consumption formula
   const saveMutation = useMutation({
-    mutationFn: (data: any) => FabriktiService.saveProduct({
-      ...data,
-      id: selectedProduct?.id,
-      consumptionFormula: formula.filter(f => f.materialId !== '')
-    }),
+    mutationFn: async (data: any) => {
+      // data contains name, category, unit, pricePerUnit
+      if (data.id) {
+        // Update product
+        const { error: upErr } = await supabase
+          .from('products')
+          .update({
+            name: data.name,
+            category: data.category,
+            unit: data.unit,
+            price_per_unit: data.pricePerUnit
+          })
+          .eq('id', data.id);
+        if (upErr) throw upErr;
+
+        // Replace consumption rows: delete old ones then insert new
+        const { error: delErr } = await supabase
+          .from('product_consumption')
+          .delete()
+          .eq('product_id', data.id);
+        if (delErr) throw delErr;
+
+        const rows = (data.consumptionFormula || []).map((f: any) => ({
+          product_id: data.id,
+          material_id: f.materialId,
+          quantity: f.quantity
+        }));
+        if (rows.length > 0) {
+          const { error: insErr } = await supabase
+            .from('product_consumption')
+            .insert(rows);
+          if (insErr) throw insErr;
+        }
+
+        return { id: data.id };
+      } else {
+        // Insert product then insert consumption rows
+        const { data: inserted, error: insErr } = await supabase
+          .from('products')
+          .insert([{
+            name: data.name,
+            category: data.category,
+            unit: data.unit,
+            price_per_unit: data.pricePerUnit
+          }])
+          .select()
+          .single();
+        if (insErr) throw insErr;
+
+        const productId = inserted.id;
+        const rows = (data.consumptionFormula || []).map((f: any) => ({
+          product_id: productId,
+          material_id: f.materialId,
+          quantity: f.quantity
+        }));
+        if (rows.length > 0) {
+          const { error: pcInsErr } = await supabase
+            .from('product_consumption')
+            .insert(rows);
+          if (pcInsErr) throw pcInsErr;
+        }
+        return { id: productId };
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['product_consumption'] });
       closeFormModal();
     }
   });
 
+  // Delete product (and its consumption rows)
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => FabriktiService.delete('products', id),
+    mutationFn: async (id: string) => {
+      // delete consumption rows first
+      const { error: delPcErr } = await supabase
+        .from('product_consumption')
+        .delete()
+        .eq('product_id', id);
+      if (delPcErr) throw delPcErr;
+
+      const { error: delProdErr } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', id);
+      if (delProdErr) throw delProdErr;
+
+      return true;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       setIsDeleteModalOpen(false);
@@ -103,7 +230,7 @@ export const ProductManagement: React.FC = () => {
 
   const updateFormulaItem = (index: number, field: keyof ProductConsumption, value: string | number) => {
     const newFormula = [...formula];
-    newFormula[index] = { ...newFormula[index], [field]: value };
+    newFormula[index] = { ...newFormula[index], [field]: value } as ProductConsumption;
     setFormula(newFormula);
   };
 
@@ -111,9 +238,9 @@ export const ProductManagement: React.FC = () => {
     setFormula(formula.filter((_, i) => i !== index));
   };
 
-  const filteredProducts = products?.filter(p =>
+  const filteredProducts = (products || []).filter((p: any) =>
     p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.category.toLowerCase().includes(searchTerm.toLowerCase())
+    (p.category || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -158,7 +285,7 @@ export const ProductManagement: React.FC = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredProducts?.map((product) => (
+            {filteredProducts.map((product: any) => (
               <div key={product.id} className="bg-white border border-slate-200 rounded-2xl p-6 hover:border-indigo-300 hover:shadow-md transition-all shadow-sm group">
                 <div className="flex justify-between items-start mb-4">
                   <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-50 to-blue-50 flex items-center justify-center text-indigo-600 font-bold text-lg border border-indigo-200">
@@ -215,7 +342,7 @@ export const ProductManagement: React.FC = () => {
               </div>
             ))}
 
-            {filteredProducts?.length === 0 && (
+            {filteredProducts.length === 0 && (
               <div className="col-span-full py-16 text-center bg-white border border-slate-200 rounded-2xl">
                 <Package size={32} className="text-slate-300 mx-auto mb-3" />
                 <p className="text-slate-500 font-semibold">Aucun produit trouvé</p>
@@ -241,7 +368,14 @@ export const ProductManagement: React.FC = () => {
                 </button>
               </div>
 
-              <form onSubmit={handleSubmit((data) => saveMutation.mutate(data))} className="space-y-4">
+              <form onSubmit={handleSubmit((data) => {
+                // prepare payload for supabase
+                saveMutation.mutate({
+                  id: selectedProduct?.id,
+                  ...data,
+                  consumptionFormula: formula
+                });
+              })} className="space-y-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Nom du produit</label>
                   <input
@@ -312,7 +446,7 @@ export const ProductManagement: React.FC = () => {
                           required
                         >
                           <option value="">-- Sélectionner une matière --</option>
-                          {materials?.map(m => <option key={m.id} value={m.id}>{m.name} ({m.unit})</option>)}
+                          {materials?.map((m: any) => <option key={m.id} value={m.id}>{m.name} ({m.unit})</option>)}
                         </select>
                       </div>
                       <div className="w-24">
@@ -351,10 +485,10 @@ export const ProductManagement: React.FC = () => {
                   </button>
                   <button
                     type="submit"
-                    disabled={saveMutation.isPending}
+                    disabled={saveMutation.isLoading}
                     className="flex-1 px-4 py-2.5 bg-[#6366F1] text-white rounded-xl text-sm font-semibold hover:bg-[#5558E3] transition-all disabled:opacity-50"
                   >
-                    {saveMutation.isPending ? 'Enregistrement...' : (selectedProduct ? 'Mettre à jour' : 'Enregistrer')}
+                    {saveMutation.isLoading ? 'Enregistrement...' : (selectedProduct ? 'Mettre à jour' : 'Enregistrer')}
                   </button>
                 </div>
               </form>
@@ -382,10 +516,10 @@ export const ProductManagement: React.FC = () => {
                 </button>
                 <button
                   onClick={() => deleteMutation.mutate(selectedProduct.id)}
-                  disabled={deleteMutation.isPending}
+                  disabled={deleteMutation.isLoading}
                   className="flex-1 px-4 py-2.5 bg-rose-600 text-white rounded-xl text-sm font-semibold hover:bg-rose-700 transition-all disabled:opacity-50"
                 >
-                  {deleteMutation.isPending ? 'Suppression...' : 'Supprimer'}
+                  {deleteMutation.isLoading ? 'Suppression...' : 'Supprimer'}
                 </button>
               </div>
             </div>
@@ -439,7 +573,7 @@ export const ProductManagement: React.FC = () => {
                   {selectedProduct.consumptionFormula && selectedProduct.consumptionFormula.length > 0 ? (
                     <div className="space-y-2">
                       {selectedProduct.consumptionFormula.map((item: any, idx: number) => {
-                        const material = materials?.find(m => m.id === item.materialId);
+                        const material = materials?.find((m: any) => m.id === item.materialId);
                         return (
                           <div key={idx} className="flex justify-between items-center p-2.5 bg-white rounded-lg border border-slate-200">
                             <span className="text-xs font-medium text-slate-900">{material?.name || 'Matière inconnue'}</span>

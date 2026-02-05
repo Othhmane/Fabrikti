@@ -1,13 +1,12 @@
-
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { FabriktiService } from '../../api/services';
 import { useAuthStore } from '../../store/authStore';
 import { Button, Input, Card } from '../../components/UI';
 import { LogIn, User as UserIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { SupabaseAuthService } from '../../api/supabaseAuth'; // Importez le service, pas supabase directement
 
 const loginSchema = z.object({
   identifier: z.string().min(1, "Identifiant requis"),
@@ -21,26 +20,28 @@ export const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
 
   const { register, handleSubmit, formState: { errors } } = useForm({
-    resolver: zodResolver(loginSchema)
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      identifier: 'tchouna@tchouna.com',
+      password: '',
+    }
   });
 
   const onSubmit = async (data: any) => {
     setLoading(true);
     setError('');
     
-    // Identifiants de test : tchouna@tchouna / tchouna
-    const isTestUser = data.identifier === 'tchouna@tchouna' && data.password === 'tchouna';
-
     try {
-      if (isTestUser || (data.identifier === 'admin@fabrikti.com' && data.password === 'admin')) {
-        const response = await FabriktiService.login(data.identifier, data.password);
-        login(response.user, response.token);
-        navigate('/');
-      } else {
-        setError('Identifiants invalides. Utilisez tchouna@tchouna / tchouna.');
-      }
-    } catch (err) {
-      setError('Erreur de connexion.');
+      // Utilisation du service d'authentification que vous avez créé
+      const response = await SupabaseAuthService.signIn(data.identifier, data.password);
+      
+      // Mise à jour du store d'authentification
+      login(response.user, response.token);
+      
+      // Redirection vers la page d'accueil
+      navigate('/');
+    } catch (err: any) {
+      setError(err.message || 'Identifiants invalides');
     } finally {
       setLoading(false);
     }
@@ -52,10 +53,10 @@ export const Login: React.FC = () => {
         <div className="text-center mb-8">
           <div className="relative inline-block mb-6">
             <div className="w-20 h-20 bg-blue-600 rounded-3xl flex items-center justify-center text-white text-4xl font-black shadow-lg shadow-blue-200 ring-4 ring-white">
-F             
- </div>
+              F             
+            </div>
             <div className="absolute bg-gray-150 -bottom-2 -right-2 w-8 h-8 bg-white rounded-full border-2 border-slate-50 flex items-center justify-center text-slate-300 shadow-sm overflow-hidden">
-                <UserIcon size={16} />
+              <UserIcon size={16} />
             </div>
           </div>
           <h1 className="text-3xl font-black text-slate-900 tracking-tight">Fabrikti</h1>
@@ -71,7 +72,7 @@ F
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
           <Input 
             label="Identifiant Professionnel" 
-            placeholder="tchouna@tchouna" 
+            placeholder="tchouna@tchouna.com" 
             {...register('identifier')} 
             error={errors.identifier?.message as string} 
           />

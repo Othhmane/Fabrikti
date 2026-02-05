@@ -4,19 +4,30 @@ import { Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { FabriktiService } from '../../api/services';
-import { Card, Button, Input } from '../../components/UI';
 import {
   Search, Plus, Mail, Phone, MapPin,
   Edit, Trash2, History, X, User,
   AlertTriangle, Info, ChevronDown, Truck, Users
 } from 'lucide-react';
-import { Client } from '../../types';
+import { supabase } from '../../api/supabase';
+
+// Type pour votre client
+type Client = {
+  id: string;
+  name: string;
+  email?: string;
+  phone: string;
+  address?: string;
+  type: 'CLIENT' | 'FOURNISSEUR';
+  created_at?: string;
+};
 
 const clientSchema = z.object({
   name: z.string().min(2, "Le nom doit contenir au moins 2 caractères"),
   phone: z.string().min(10, "Numéro de téléphone invalide (10 chiffres min)"),
-  type: z.enum(['CLIENT', 'FOURNISSEUR']), // Nouveau champ
+  type: z.enum(['CLIENT', 'FOURNISSEUR']),
+  email: z.string().email("Email invalide").optional().or(z.literal('')),
+  address: z.string().optional(),
 });
 
 type ClientFormData = z.infer<typeof clientSchema>;
@@ -30,29 +41,103 @@ export const ClientList: React.FC = () => {
   const [isBlockedModalOpen, setIsBlockedModalOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
 
-  const { data: clients, isLoading } = useQuery({ queryKey: ['clients'], queryFn: FabriktiService.getClients });
-  const { data: orders } = useQuery({ queryKey: ['orders'], queryFn: FabriktiService.getOrders });
-  const { data: transactions } = useQuery({ queryKey: ['transactions'], queryFn: FabriktiService.getTransactions });
+  // Fonctions pour récupérer les données depuis Supabase
+  const fetchClients = async () => {
+    const { data, error } = await supabase
+      .from('clients')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) throw new Error(error.message);
+    return data as Client[];
+  };
+
+  const fetchOrders = async () => {
+    const { data, error } = await supabase
+      .from('orders')
+      .select('id, client_id');
+    
+    if (error) throw new Error(error.message);
+    return data;
+  };
+
+  const fetchTransactions = async () => {
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('id, client_id');
+    
+    if (error) throw new Error(error.message);
+    return data;
+  };
+
+  const { data: clients, isLoading } = useQuery({ 
+    queryKey: ['clients'], 
+    queryFn: fetchClients 
+  });
+  
+  const { data: orders } = useQuery({ 
+    queryKey: ['orders'], 
+    queryFn: fetchOrders 
+  });
+  
+  const { data: transactions } = useQuery({ 
+    queryKey: ['transactions'], 
+    queryFn: fetchTransactions 
+  });
 
   const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<ClientFormData>({
     resolver: zodResolver(clientSchema),
     defaultValues: { type: 'CLIENT' }
   });
 
+  // Mutation pour sauvegarder un client
   const saveMutation = useMutation({
-    mutationFn: (data: ClientFormData) => FabriktiService.saveClient({
-      ...data,
-      id: selectedClient?.id,
-      providedProducts: selectedClient?.providedProducts || []
-    }),
+    mutationFn: async (data: ClientFormData) => {
+      if (selectedClient) {
+        // Mise à jour d'un client existant
+        const { error } = await supabase
+          .from('clients')
+          .update({
+            name: data.name,
+            phone: data.phone,
+            email: data.email || null,
+            address: data.address || null,
+            type: data.type
+          })
+          .eq('id', selectedClient.id);
+        
+        if (error) throw new Error(error.message);
+      } else {
+        // Création d'un nouveau client
+        const { error } = await supabase
+          .from('clients')
+          .insert({
+            name: data.name,
+            phone: data.phone,
+            email: data.email || null,
+            address: data.address || null,
+            type: data.type
+          });
+        
+        if (error) throw new Error(error.message);
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
       closeFormModal();
     }
   });
 
+  // Mutation pour supprimer un client
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => FabriktiService.deleteClient(id),
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('clients')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw new Error(error.message);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
       setIsDeleteModalOpen(false);
@@ -64,10 +149,10 @@ export const ClientList: React.FC = () => {
     setSelectedClient(client);
     if (client) {
       setValue('name', client.name);
-      setValue('email', client.email);
+      setValue('email', client.email || '');
       setValue('phone', client.phone);
-      setValue('address', client.address);
-      setValue('type', (client as any).type || 'CLIENT');
+      setValue('address', client.address || '');
+      setValue('type', client.type);
     } else {
       reset({ type: 'CLIENT' });
     }
@@ -82,8 +167,8 @@ export const ClientList: React.FC = () => {
 
   const handleDeleteClick = (client: Client) => {
     setSelectedClient(client);
-    const hasOrders = orders?.some(o => o.clientId === client.id);
-    const hasTransactions = transactions?.some(t => t.clientId === client.id);
+    const hasOrders = orders?.some((o: any) => o.client_id === client.id);
+    const hasTransactions = transactions?.some((t: any) => t.client_id === client.id);
 
     if (hasOrders || hasTransactions) {
       setIsBlockedModalOpen(true);
@@ -94,8 +179,8 @@ export const ClientList: React.FC = () => {
 
   const filteredClients = clients?.filter(c => {
     const matchesSearch = c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         c.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = filterType === 'ALL' || (c as any).type === filterType;
+                         (c.email && c.email.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesType = filterType === 'ALL' || c.type === filterType;
     return matchesSearch && matchesType;
   });
 
@@ -108,22 +193,6 @@ export const ClientList: React.FC = () => {
             <h1 className="text-3xl font-bold text-slate-900">Partenaires</h1>
             <p className="text-sm text-slate-500 mt-2">Gestion des clients et fournisseurs</p>
           </div>
-{/*
-          <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
-            <button 
-              onClick={() => setFilterType('ALL')}
-              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${filterType === 'ALL' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500'}`}
-            >Tout</button>
-            <button 
-              onClick={() => setFilterType('CLIENT')}
-              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${filterType === 'CLIENT' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500'}`}
-            >Clients</button>
-            <button 
-              onClick={() => setFilterType('FOURNISSEUR')}
-              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${filterType === 'FOURNISSEUR' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500'}`}
-            >Fournisseurs</button>
-          </div>
-           */}
         </div>
       </div>
 
@@ -159,18 +228,18 @@ export const ClientList: React.FC = () => {
                 <div key={client.id} className="bg-white border border-slate-200 rounded-2xl p-6 hover:border-indigo-300 hover:shadow-md transition-all shadow-sm group relative overflow-hidden">
                   {/* Badge Type */}
                   <div className={`absolute top-0  right-0 px-3 py-1 rounded-bl-xl text-[10px] font-bold uppercase tracking-wider ${
-                    (client as any).type === 'FOURNISSEUR' ? 'bg-indigo-100 text-indigo-700' : 'bg-indigo-100 text-indigo-700'
+                    client.type === 'FOURNISSEUR' ? 'bg-indigo-100 text-indigo-700' : 'bg-indigo-100 text-indigo-700'
                   }`}>
-                    {(client as any).type === 'FOURNISSEUR' ? 'Fournisseur' : 'Client'}
+                    {client.type === 'FOURNISSEUR' ? 'Fournisseur' : 'Client'}
                   </div>
 
                   <div className="flex justify-between items-start mb-4">
                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg border ${
-                      (client as any).type === 'FOURNISSEUR' 
+                      client.type === 'FOURNISSEUR' 
                       ? 'bg-amber-50 text-amber-600 border-amber-200' 
                       : 'bg-indigo-50 text-indigo-600 border-indigo-200'
                     }`}>
-                      {(client as any).type === 'FOURNISSEUR' ? <Truck size={20}/> : client.name.charAt(0).toUpperCase()}
+                      {client.type === 'FOURNISSEUR' ? <Truck size={20}/> : client.name.charAt(0).toUpperCase()}
                     </div>
                     <div className="flex gap-2">
                       <button onClick={() => openFormModal(client)} className="p-2 text-yellow-600 bg-yellow-50 hover:bg-yellow-100 rounded-lg border border-yellow-200 transition-all font-semibold"><Edit size={16} /></button>
@@ -180,12 +249,12 @@ export const ClientList: React.FC = () => {
 
                   <h3 className="text-base font-bold text-slate-900 mb-3">{client.name}</h3>
                   <div className="space-y-2.5 mb-4 text-sm">
-                    {/*
-                    <div className="bg-blue-50 flex items-center gap-3 p-2 bg-slate-50 rounded-lg text-slate-700 border border-slate-100">
-                      <Mail size={14} className="text-slate-400 shrink-0" />
-                      <span className="truncate text-xs font-medium">{client.email}</span>
-                    </div>
-                    */}
+                    {client.email && (
+                      <div className="bg-blue-50 flex items-center gap-3 p-2 bg-slate-50 rounded-lg text-slate-700 border border-slate-100">
+                        <Mail size={14} className="text-slate-400 shrink-0" />
+                        <span className="truncate text-xs font-medium">{client.email}</span>
+                      </div>
+                    )}
                     <div className="bg-green-50 flex items-center gap-3 p-2 bg-slate-50 rounded-lg text-slate-700 border border-slate-100">
                       <Phone size={14} className="text-slate-400 shrink-0" />
                       <span className="text-xs font-medium">{client.phone}</span>
@@ -256,7 +325,6 @@ export const ClientList: React.FC = () => {
                   <div>
                     <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Adresse</label>
                     <input placeholder="Rue de l'industrie, Paris" {...register('address')} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all" />
-                    {errors.address && <p className="text-xs text-rose-500 mt-1">{errors.address.message}</p>}
                   </div>
 
                   <div className="flex gap-3 pt-4">
@@ -269,36 +337,65 @@ export const ClientList: React.FC = () => {
               </div>
             </div>
           )}
-          {/* ... Reste des modals (Delete, Blocked) inchangés ... */}
-   {/* MODAL BLOCAGE SUPPRESSION */}
-        {isBlockedModalOpen && selectedClient && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-            <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 text-center">
-              <div className="mx-auto w-14 h-14 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center mb-4">
-                <Info size={28} />
-              </div>
-              <h3 className="text-lg font-bold text-slate-900 mb-2">Action impossible</h3>
-              <p className="text-sm text-slate-600 mb-6">
-                Le client <span className="font-bold">"{selectedClient.name}"</span> possède des commandes ou transactions actives. Il ne peut pas être supprimé.
-              </p>
-              <div className="space-y-2">
-                <Link to={`/clients/${selectedClient.id}/history`} onClick={() => setIsBlockedModalOpen(false)}>
-                  <button className="w-full px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl text-sm font-semibold hover:bg-slate-200 transition-all">
-                    Consulter l'historique
+
+          {/* MODAL CONFIRMATION SUPPRESSION */}
+          {isDeleteModalOpen && selectedClient && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+              <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 text-center">
+                <div className="mx-auto w-14 h-14 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center mb-4">
+                  <Info size={28} />
+                </div>
+                <h3 className="text-lg font-bold text-slate-900 mb-2">Confirmer la suppression</h3>
+                <p className="text-sm text-slate-600 mb-6">
+                  Voulez-vous vraiment supprimer le partenaire <span className="font-bold">"{selectedClient.name}"</span> ?
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => deleteMutation.mutate(selectedClient.id)}
+                    className="flex-1 px-4 py-2.5 bg-rose-600 text-white rounded-xl text-sm font-semibold hover:bg-rose-700 transition-all"
+                  >
+                    Supprimer
                   </button>
-                </Link>
-                <button
-                  onClick={() => setIsBlockedModalOpen(false)}
-                  className="w-full px-4 py-2.5 text-slate-500 text-sm font-semibold hover:text-slate-700 transition-all"
-                >
-                  Fermer
-                </button>
+                  <button
+                    onClick={() => setIsDeleteModalOpen(false)}
+                    className="flex-1 px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl text-sm font-semibold hover:bg-slate-200 transition-all"
+                  >
+                    Annuler
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+
+          {/* MODAL BLOCAGE SUPPRESSION */}
+          {isBlockedModalOpen && selectedClient && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+              <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 text-center">
+                <div className="mx-auto w-14 h-14 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center mb-4">
+                  <Info size={28} />
+                </div>
+                <h3 className="text-lg font-bold text-slate-900 mb-2">Action impossible</h3>
+                <p className="text-sm text-slate-600 mb-6">
+                  Le partenaire <span className="font-bold">"{selectedClient.name}"</span> possède des commandes ou transactions actives. Il ne peut pas être supprimé.
+                </p>
+                <div className="space-y-2">
+                  <Link to={`/clients/${selectedClient.id}/history`} onClick={() => setIsBlockedModalOpen(false)}>
+                    <button className="w-full px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl text-sm font-semibold hover:bg-slate-200 transition-all">
+                      Consulter l'historique
+                    </button>
+                  </Link>
+                  <button
+                    onClick={() => setIsBlockedModalOpen(false)}
+                    className="w-full px-4 py-2.5 text-slate-500 text-sm font-semibold hover:text-slate-700 transition-all"
+                  >
+                    Fermer
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
+    </div>
   );
 };

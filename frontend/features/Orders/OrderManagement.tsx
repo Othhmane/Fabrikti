@@ -1,7 +1,8 @@
+// OrderManagement.tsx
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { FabriktiService } from '../../api/services';
+import { supabase } from '../../api/supabase'; // <-- adapte le chemin si besoin
 import { OrderStatus, PaymentStatus, Order, OrderItem } from '../../types';
 import {
   Clock, Package, Truck, Database, Plus, Search,
@@ -10,66 +11,161 @@ import {
   Calendar, DollarSign, Filter, RotateCcw, ChevronDown, ChevronRight
 } from 'lucide-react';
 
+/* ---------- Labels ---------- */
 const STATUS_LABELS: Record<string, { label: string, bgColor: string, textColor: string, icon: any }> = {
-  [OrderStatus.EN_ATTENTE]: {
-    label: 'En attente',
-    bgColor: 'bg-slate-100',
-    textColor: 'text-slate-700',
-    icon: <Clock size={12}/>
-  },
-  [OrderStatus.EN_PREPARATION]: {
-    label: 'Préparation',
-    bgColor: 'bg-amber-100',
-    textColor: 'text-amber-700',
-    icon: <Package size={12}/>
-  },
-  [OrderStatus.EN_STOCK]: {
-    label: 'En stock',
-    bgColor: 'bg-indigo-100',
-    textColor: 'text-indigo-700',
-    icon: <Database size={12}/>
-  },
-  [OrderStatus.LIVREE]: {
-    label: 'Livrée',
-    bgColor: 'bg-emerald-100',
-    textColor: 'text-emerald-700',
-    icon: <CheckCircle2 size={12}/>
-  },
-  [OrderStatus.ANNULEE]: {
-    label: 'Annulée',
-    bgColor: 'bg-rose-100',
-    textColor: 'text-rose-700',
-    icon: <Ban size={12}/>
-  },
+  [OrderStatus.EN_ATTENTE]: { label: 'En attente', bgColor: 'bg-slate-100', textColor: 'text-slate-700', icon: <Clock size={12}/> },
+  [OrderStatus.EN_PREPARATION]: { label: 'Préparation', bgColor: 'bg-amber-100', textColor: 'text-amber-700', icon: <Package size={12}/> },
+  [OrderStatus.EN_STOCK]: { label: 'En stock', bgColor: 'bg-indigo-100', textColor: 'text-indigo-700', icon: <Database size={12}/> },
+  [OrderStatus.LIVREE]: { label: 'Livrée', bgColor: 'bg-emerald-100', textColor: 'text-emerald-700', icon: <CheckCircle2 size={12}/> },
+  [OrderStatus.ANNULEE]: { label: 'Annulée', bgColor: 'bg-rose-100', textColor: 'text-rose-700', icon: <Ban size={12}/> },
 };
 
 const PAYMENT_LABELS: Record<string, { label: string, bgColor: string, textColor: string }> = {
-  [PaymentStatus.PAYEE]: {
-    label: 'Payée',
-    bgColor: 'bg-emerald-100',
-    textColor: 'text-emerald-700'
-  },
-  [PaymentStatus.PARTIEL]: {
-    label: 'Partiel',
-    bgColor: 'bg-amber-100',
-    textColor: 'text-amber-700'
-  },
-  [PaymentStatus.NON_PAYEE]: {
-    label: 'Non payée',
-    bgColor: 'bg-rose-50',
-    textColor: 'text-rose-700'
-  },
-  [PaymentStatus.EN_DETTE]: {
-    label: 'En dette',
-    bgColor: 'bg-rose-100',
-    textColor: 'text-rose-700'
-  },
-  [PaymentStatus.EN_PLUS]: {
-    label: 'Crédit',
-    bgColor: 'bg-blue-100',
-    textColor: 'text-blue-700'
-  },
+  [PaymentStatus.PAYEE]: { label: 'Payée', bgColor: 'bg-emerald-100', textColor: 'text-emerald-700' },
+  [PaymentStatus.PARTIEL]: { label: 'Partiel', bgColor: 'bg-amber-100', textColor: 'text-amber-700' },
+  [PaymentStatus.NON_PAYEE]: { label: 'Non payée', bgColor: 'bg-rose-50', textColor: 'text-rose-700' },
+  [PaymentStatus.EN_DETTE]: { label: 'En dette', bgColor: 'bg-rose-100', textColor: 'text-rose-700' },
+  [PaymentStatus.EN_PLUS]: { label: 'Crédit', bgColor: 'bg-blue-100', textColor: 'text-blue-700' },
 };
+
+/* ---------- Mappers (DB -> UI) ---------- */
+const mapOrderRowToOrder = (row: any): Order => ({
+  id: row.id,
+  clientId: row.client_id,
+  orderDate: row.order_date,
+  deliveryDate: row.delivery_date,
+  status: row.status,
+  totalPrice: Number(row.total_price ?? 0),
+  paidAmount: Number(row.paid_amount ?? 0),
+  paymentStatus: row.payment_status,
+  notes: row.notes,
+  createdAt: row.created_at,
+  items: (row.order_items ?? []).map((it: any) => ({
+    id: it.id,
+    productId: it.product_id,
+    quantity: Number(it.quantity ?? 0),
+    unit: it.unit,
+    unitPrice: Number(it.unit_price ?? 0),
+    totalItemPrice: Number(it.total_item_price ?? 0),
+  })) as OrderItem[]
+});
+
+const mapProductRow = (row: any) => ({
+  id: row.id,
+  name: row.name,
+  unit: row.unit,
+  pricePerUnit: Number((row.price_per_unit ?? row.price) || 0),
+  reference: row.reference ?? '',
+});
+
+const mapMaterialRow = (row: any) => ({
+  id: row.id,
+  name: row.name,
+  unit: row.unit,
+  pricePerUnit: Number((row.price_per_unit ?? row.price) || 0),
+  stock: Number(row.stock ?? 0),
+  supplierId: row.supplier_id ?? null,
+});
+
+/* ---------- Supabase ops ---------- */
+
+const fetchOrders = async (): Promise<Order[]> => {
+  const { data, error } = await supabase
+    .from('orders')
+    .select('*, order_items(*)')
+    .order('order_date', { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map(mapOrderRowToOrder);
+};
+
+const fetchClients = async () => {
+  const { data, error } = await supabase.from('clients').select('*').order('name', { ascending: true });
+  if (error) throw error;
+  return data;
+};
+
+const fetchProducts = async () => {
+  const { data, error } = await supabase.from('products').select('*').order('name', { ascending: true });
+  if (error) throw error;
+  return (data ?? []).map(mapProductRow);
+};
+
+const fetchMaterials = async () => {
+  const { data, error } = await supabase.from('materials').select('*').order('name', { ascending: true });
+  if (error) throw error;
+  return (data ?? []).map(mapMaterialRow);
+};
+
+
+const saveOrderSupabase = async (order: Partial<Order>) => {
+  const dbOrder = {
+    client_id: order.clientId,
+    order_date: order.orderDate,
+    delivery_date: order.deliveryDate ?? null,
+    status: order.status ?? OrderStatus.EN_ATTENTE,
+    total_price: order.totalPrice ?? 0,
+    paid_amount: order.paidAmount ?? 0,
+    payment_status: order.paymentStatus ?? PaymentStatus.NON_PAYEE,
+    notes: order.notes ?? null,
+  };
+
+  if (order.id) {
+    // Mise à jour commande
+    const { error: updErr } = await supabase.from('orders').update(dbOrder).eq('id', order.id);
+    if (updErr) throw updErr;
+
+    // Suppression anciens order_items (déclenche trigger delete)
+    const { error: delErr } = await supabase.from('order_items').delete().eq('order_id', order.id);
+    if (delErr) throw delErr;
+
+    // Insertion nouveaux order_items (déclenche trigger insert)
+    if (order.items && order.items.length > 0) {
+      const rows = order.items.map(it => ({
+        order_id: order.id,
+        product_id: it.productId,
+        quantity: it.quantity ?? 0,
+        unit: it.unit ?? 'unité',
+        unit_price: it.unitPrice ?? 0,
+        total_item_price: it.totalItemPrice ?? ((it.quantity ?? 0) * (it.unitPrice ?? 0)),
+      }));
+      const { error: insErr } = await supabase.from('order_items').insert(rows);
+      if (insErr) throw insErr;
+    }
+
+    return { id: order.id };
+  } else {
+    // Création nouvelle commande
+    const { data: inserted, error: insErr } = await supabase.from('orders').insert([dbOrder]).select().single();
+    if (insErr) throw insErr;
+    const orderId = inserted.id;
+
+    // Insertion order_items
+    if (order.items && order.items.length > 0) {
+      const rows = order.items.map(it => ({
+        order_id: orderId,
+        product_id: it.productId,
+        quantity: it.quantity ?? 0,
+        unit: it.unit ?? 'unité',
+        unit_price: it.unitPrice ?? 0,
+        total_item_price: it.totalItemPrice ?? ((it.quantity ?? 0) * (it.unitPrice ?? 0)),
+      }));
+      const { error: insItemsErr } = await supabase.from('order_items').insert(rows);
+      if (insItemsErr) throw insItemsErr;
+    }
+
+    return { id: orderId };
+  }
+};
+
+
+
+const deleteOrderSupabase = async (id: string) => {
+  const { error } = await supabase.from('orders').delete().eq('id', id);
+  if (error) throw error;
+  return true;
+};
+
+/* ---------- Component ---------- */
 
 export const OrderManagement: React.FC = () => {
   const queryClient = useQueryClient();
@@ -88,34 +184,36 @@ export const OrderManagement: React.FC = () => {
   const [filterPaymentStatus, setFilterPaymentStatus] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
 
-  const [items, setItems] = useState<Partial<OrderItem>[]>([{ id: '1', productId: '', quantity: 1, unit: 'paire', unitPrice: 0, totalItemPrice: 0}]);
+  const [items, setItems] = useState<Partial<OrderItem>[]>([{ id: '1', productId: '', quantity: 1, unit: 'paire', unitPrice: 0, totalItemPrice: 0 }]);
   const [advancePayment, setAdvancePayment] = useState<number>(0);
-  const [selectedClientId, setSelectedClientId] = useState<string>(''); // Nouvel état pour le client sélectionné
+  const [selectedClientId, setSelectedClientId] = useState<string>('');
 
-  const { data: orders, isLoading } = useQuery({ queryKey: ['orders'], queryFn: FabriktiService.getOrders });
-  const { data: clients } = useQuery({ queryKey: ['clients'], queryFn: FabriktiService.getClients });
-  const { data: products } = useQuery({ queryKey: ['products'], queryFn: FabriktiService.getProducts });
-  const { data: materials } = useQuery({ queryKey: ['materials'], queryFn: FabriktiService.getRawMaterials }); // Récupération des matières premières
+  const { data: orders, isLoading } = useQuery({ queryKey: ['orders'], queryFn: fetchOrders });
+  const { data: clients } = useQuery({ queryKey: ['clients'], queryFn: fetchClients });
+  const { data: products } = useQuery({ queryKey: ['products'], queryFn: fetchProducts });
+  const { data: materials } = useQuery({ queryKey: ['materials'], queryFn: fetchMaterials });
 
-  // Déterminer si le client sélectionné est un fournisseur
   const isSupplier = useMemo(() => {
-    const client = clients?.find(c => c.id === selectedClientId);
+    const client = (clients ?? []).find((c: any) => c.id === selectedClientId);
     return client?.type === 'FOURNISSEUR';
   }, [selectedClientId, clients]);
 
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
 
-  const saveMutation = useMutation({
-    mutationFn: (data: Partial<Order>) => FabriktiService.saveOrder(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['orders'] });
-      handleCloseModal();
-    }
-  });
+const saveMutation = useMutation({
+  mutationFn: (data: Partial<Order>) => saveOrderSupabase(data),
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ['orders'] });
+    handleCloseModal();
+  },
+  onError: (error: any) => {
+    alert('Erreur lors de la sauvegarde : ' + (error.message || 'Stock insuffisant ou autre erreur'));
+  }
+});
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => FabriktiService.delete('orders', id),
+    mutationFn: (id: string) => deleteOrderSupabase(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       setIsDeleteModalOpen(false);
@@ -125,16 +223,16 @@ export const OrderManagement: React.FC = () => {
 
   const handleOpenCreate = () => {
     setEditingOrder(null);
-    setSelectedClientId(''); // Réinitialiser le client sélectionné
-    setItems([{ id: '1', productId: '', quantity: 1, unit: 'paire', unitPrice: 0, totalItemPrice: 0}]);
+    setSelectedClientId('');
+    setItems([{ id: '1', productId: '', quantity: 1, unit: 'paire', unitPrice: 0, totalItemPrice: 0 }]);
     setAdvancePayment(0);
     setIsModalOpen(true);
   };
 
   const handleOpenEdit = (order: Order) => {
     setEditingOrder(order);
-    setSelectedClientId(order.clientId); // Mettre à jour le client sélectionné
-    setItems(order.items || []);
+    setSelectedClientId(order.clientId);
+    setItems(order.items?.map(it => ({ ...it })) ?? [{ id: '1', productId: '', quantity: 1, unit: 'paire', unitPrice: 0, totalItemPrice: 0 }]);
     setAdvancePayment(order.paidAmount || 0);
     setIsModalOpen(true);
   };
@@ -148,7 +246,7 @@ export const OrderManagement: React.FC = () => {
     setIsModalOpen(false);
     setEditingOrder(null);
     setAdvancePayment(0);
-    setSelectedClientId(''); // Réinitialiser le client sélectionné
+    setSelectedClientId('');
   };
 
   const openDetailsModal = (order: Order) => {
@@ -162,7 +260,7 @@ export const OrderManagement: React.FC = () => {
   };
 
   const addLine = () => {
-    setItems([...items, { id: Date.now().toString(), productId: '', quantity: 1, unit: 'paire', unitPrice: 0, totalItemPrice: 0}]);
+    setItems(prev => [...prev, { id: Date.now().toString(), productId: '', quantity: 1, unit: 'paire', unitPrice: 0, totalItemPrice: 0 }]);
   };
 
   const removeLine = (id: string) => {
@@ -172,15 +270,14 @@ export const OrderManagement: React.FC = () => {
   const updateLine = (id: string, field: keyof OrderItem, value: any) => {
     setItems(prevItems => prevItems.map(item => {
       if (item.id === id) {
-        const updated = { ...item, [field]: value };
+        const updated: any = { ...item, [field]: value };
         if (field === 'productId') {
-          // Sélectionner dans la bonne liste selon le type de client
           const sourceList = isSupplier ? materials : products;
-          const product = sourceList?.find(p => p.id === value);
+          const product = (sourceList ?? []).find((p: any) => p.id === value);
           updated.unit = product?.unit || 'unité';
-          updated.unitPrice = (product as any)?.pricePerUnit || 0;
+          updated.unitPrice = (product as any)?.pricePerUnit ?? 0;
         }
-        updated.totalItemPrice = (updated.quantity || 0) * (updated.unitPrice || 0);
+        updated.totalItemPrice = (Number(updated.quantity ?? 0) * Number(updated.unitPrice ?? 0));
         return updated;
       }
       return item;
@@ -192,41 +289,35 @@ export const OrderManagement: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
+
     const data: Partial<Order> = {
       id: editingOrder?.id,
-      clientId: formData.get('clientId') as string,
-      orderDate: formData.get('orderDate') as string,
-      deliveryDate: formData.get('deliveryDate') as string || undefined,
-      status: (formData.get('status') as OrderStatus) || OrderStatus.EN_ATTENTE,
+      clientId: selectedClientId,
+      orderDate: (e.currentTarget.elements.namedItem('orderDate') as HTMLInputElement).value,
+      deliveryDate: (e.currentTarget.elements.namedItem('deliveryDate') as HTMLInputElement)?.value || undefined,
+      status: (e.currentTarget.elements.namedItem('status') as HTMLSelectElement).value as OrderStatus || OrderStatus.EN_ATTENTE,
       items: items as OrderItem[],
       totalPrice: totalOrderPrice,
       paidAmount: advancePayment,
-      paymentStatus: advancePayment >= totalOrderPrice 
-        ? PaymentStatus.PAYEE 
-        : advancePayment > 0 
-          ? PaymentStatus.PARTIEL 
-          : PaymentStatus.NON_PAYEE,
-      notes: formData.get('notes') as string || undefined,
+      paymentStatus: advancePayment >= totalOrderPrice ? PaymentStatus.PAYEE : advancePayment > 0 ? PaymentStatus.PARTIEL : PaymentStatus.NON_PAYEE,
+      notes: (e.currentTarget.elements.namedItem('notes') as HTMLTextAreaElement).value || undefined,
     };
+
     saveMutation.mutate(data);
   };
 
   const filteredOrders = useMemo(() => {
     if (!orders) return [];
     return orders.filter(order => {
-      const client = clients?.find(c => c.id === order.clientId);
-      const matchesSearch = order.id.toLowerCase().includes(searchTerm.toLowerCase()) || client?.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const client = (clients ?? []).find((c: any) => c.id === order.clientId);
+      const matchesSearch = order.id.toLowerCase().includes(searchTerm.toLowerCase()) || (client?.name ?? '').toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStatus = filterStatus === 'all' || order.status === filterStatus;
       const matchesPayment = filterPaymentStatus === 'all' || order.paymentStatus === filterPaymentStatus;
       return matchesSearch && matchesStatus && matchesPayment;
     }).sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
   }, [orders, clients, searchTerm, filterStatus, filterPaymentStatus]);
 
-  const resetFilters = () => {
-    setFilterStatus('all');
-    setFilterPaymentStatus('all');
-  };
+  const resetFilters = () => { setFilterStatus('all'); setFilterPaymentStatus('all'); };
 
   const activeFiltersCount = useMemo(() => {
     let count = 0;
@@ -238,9 +329,9 @@ export const OrderManagement: React.FC = () => {
   // Stats
   const stats = useMemo(() => {
     const total = filteredOrders.length;
-    const totalAmount = filteredOrders.reduce((sum, o) => sum + o.totalPrice, 0);
+    const totalAmount = filteredOrders.reduce((sum, o) => sum + (o.totalPrice ?? 0), 0);
     const delivered = filteredOrders.filter(o => o.status === OrderStatus.LIVREE).length;
-    const pending = filteredOrders.filter(o => o.status === OrderStatus.EN_ATTENTE || o.status === OrderStatus.EN_PREPARATION).length;
+    const pending = filteredOrders.filter(o => [OrderStatus.EN_ATTENTE, OrderStatus.EN_PREPARATION].includes(o.status)).length;
     return { total, totalAmount, delivered, pending };
   }, [filteredOrders]);
 
@@ -257,7 +348,6 @@ export const OrderManagement: React.FC = () => {
       {/* MAIN CONTENT */}
       <div className="p-6 md:p-10">
         <div className="max-w-7xl mx-auto space-y-6">
-
           {/* STATS CARDS */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
@@ -321,71 +411,25 @@ export const OrderManagement: React.FC = () => {
               <button
                 onClick={() => setShowFilters(!showFilters)}
                 className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
-                  showFilters
-                    ? 'bg-indigo-600 text-white shadow-md'
-                    : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
+                  showFilters ? 'bg-indigo-600 text-white shadow-md' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
                 }`}
               >
                 <Filter size={18} />
                 Filtres
-                {activeFiltersCount > 0 && (
-                  <span className="ml-1 px-1.5 py-0.5 bg-white/20 rounded text-xs font-bold">
-                    {activeFiltersCount}
-                  </span>
-                )}
+                {activeFiltersCount > 0 && <span className="ml-1 px-1.5 py-0.5 bg-white/20 rounded text-xs font-bold">{activeFiltersCount}</span>}
                 <ChevronDown size={16} className={`transition-transform ${showFilters ? 'rotate-180' : ''}`} />
               </button>
               {activeFiltersCount > 0 && (
-                <button
-                  onClick={resetFilters}
-                  className="p-2.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all border border-slate-200"
-                  title="Réinitialiser les filtres"
-                >
+                <button onClick={resetFilters} className="p-2.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all border border-slate-200" title="Réinitialiser les filtres">
                   <RotateCcw size={18} />
                 </button>
               )}
             </div>
-            <button
-              onClick={handleOpenCreate}
-              className="flex items-center gap-2 px-5 py-2.5 bg-[#6366F1] text-white rounded-lg text-sm font-semibold hover:bg-[#5558E3] transition-all shadow-md hover:shadow-lg whitespace-nowrap"
-            >
+            <button onClick={handleOpenCreate} className="flex items-center gap-2 px-5 py-2.5 bg-[#6366F1] text-white rounded-lg text-sm font-semibold hover:bg-[#5558E3] transition-all shadow-md hover:shadow-lg whitespace-nowrap">
               <Plus size={18} />
               Nouveau Bon
             </button>
           </div>
-
-          {/* ADVANCED FILTERS PANEL */}
-          {showFilters && (
-            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Statut commande */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Statut de la commande</label>
-                  <select
-                    value={filterStatus}
-                    onChange={(e) => setFilterStatus(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none text-sm bg-white"
-                  >
-                    <option value="all">Tous les statuts</option>
-                    {Object.values(OrderStatus).map(s => <option key={s} value={s}>{STATUS_LABELS[s]?.label || s}</option>)}
-                  </select>
-                </div>
-
-                {/* Statut paiement */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Statut du paiement</label>
-                  <select
-                    value={filterPaymentStatus}
-                    onChange={(e) => setFilterPaymentStatus(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none text-sm bg-white"
-                  >
-                    <option value="all">Tous les paiements</option>
-                    {Object.values(PaymentStatus).map(p => <option key={p} value={p}>{PAYMENT_LABELS[p]?.label || p}</option>)}
-                  </select>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* TABLE */}
           {isLoading ? (
@@ -417,14 +461,12 @@ export const OrderManagement: React.FC = () => {
                         </td>
                       </tr>
                     ) : filteredOrders.map(order => {
-                      const client = clients?.find(c => c.id === order.clientId);
+                      const client = (clients ?? []).find((c: any) => c.id === order.clientId);
                       const statusConfig = STATUS_LABELS[order.status] || { label: order.status, bgColor: 'bg-slate-100', textColor: 'text-slate-700', icon: null };
                       const paymentConfig = PAYMENT_LABELS[order.paymentStatus] || { label: order.paymentStatus, bgColor: 'bg-slate-100', textColor: 'text-slate-700' };
                       return (
                         <tr key={order.id} className="hover:bg-slate-50 transition-colors group">
-                          <td className="px-6 py-4">
-                            <span className="text-sm font-medium text-slate-900">#{order.id.slice(0,8).toUpperCase()}</span>
-                          </td>
+                          <td className="px-6 py-4"><span className="text-sm font-medium text-slate-900">#{order.id.slice(0,8).toUpperCase()}</span></td>
                           <td className="px-6 py-4">
                             <Link to={`/clients/${order.clientId}/history`} className="text-sm text-indigo-600 hover:text-indigo-800 hover:underline font-medium flex items-center gap-1.5">
                               <User size={14} />
@@ -432,64 +474,21 @@ export const OrderManagement: React.FC = () => {
                             </Link>
                           </td>
                           <td className="px-6 py-4">
-                            <div className="flex items-center gap-2">
-                              <Calendar size={14} className="text-slate-400" />
-                              <span className="text-sm text-slate-700">{new Date(order.orderDate).toLocaleDateString('fr-FR')}</span>
-                            </div>
+                            <div className="flex items-center gap-2"><Calendar size={14} className="text-slate-400" /><span className="text-sm text-slate-700">{new Date(order.orderDate).toLocaleDateString('fr-FR')}</span></div>
                           </td>
                           <td className="px-6 py-4">
-                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium ${statusConfig.bgColor} ${statusConfig.textColor} whitespace-nowrap`}>
-                              {statusConfig.icon}
-                              {statusConfig.label}
-                            </span>
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium ${statusConfig.bgColor} ${statusConfig.textColor} whitespace-nowrap`}>{statusConfig.icon}{statusConfig.label}</span>
                           </td>
                           <td className="px-6 py-4">
-                            <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium ${paymentConfig.bgColor} ${paymentConfig.textColor} whitespace-nowrap`}>
-                              {paymentConfig.label}
-                            </span>
+                            <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium ${paymentConfig.bgColor} ${paymentConfig.textColor} whitespace-nowrap`}>{paymentConfig.label}</span>
                           </td>
-                          <td className="px-6 py-4">
-                            <span className="text-sm font-semibold text-slate-900">{order.totalPrice.toLocaleString()} DA</span>
-                          </td>
+                          <td className="px-6 py-4"><span className="text-sm font-semibold text-slate-900">{(order.totalPrice ?? 0).toLocaleString()} DA</span></td>
                           <td className="px-6 py-4 text-right">
                             <div className="flex justify-end gap-2">
-                              {/*  
-
-                              <Link to={`/orders/${order.id}`}>
-                                <button
-                                  className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 transition-all font-semibold"
-                                  title="Voir Détails"
-                                >
-                                  <ChevronRight size={16} />
-                                </button>
-                              </Link>
-                              */}
-                              <button
-                                onClick={() => handleOpenPrint(order)}
-                                className="p-2 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200 transition-all font-semibold"
-                                title="Imprimer BC"
-                              >
-                                <Printer size={16} />
-                              </button>
-                              <button
-                                onClick={() => openDetailsModal(order)}
-                                className="p-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 transition-all font-semibold"
-                                title="Détails"
-                              >
-                                <Info size={16} />
-                              </button>
-                              <button
-                                onClick={() => handleOpenEdit(order)}
-                                className="p-2 text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-lg border border-amber-200 transition-all font-semibold"
-                              >
-                                <Edit3 size={16} />
-                              </button>
-                              <button
-                                onClick={() => { setOrderToDelete(order); setIsDeleteModalOpen(true); }}
-                                className="p-2 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg border border-rose-200 transition-all font-semibold"
-                              >
-                                <Trash2 size={16} />
-                              </button>
+                              <button onClick={() => handleOpenPrint(order)} className="p-2 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200 transition-all font-semibold" title="Imprimer BC"><Printer size={16} /></button>
+                              <button onClick={() => openDetailsModal(order)} className="p-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 transition-all font-semibold" title="Détails"><Info size={16} /></button>
+                              <button onClick={() => handleOpenEdit(order)} className="p-2 text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-lg border border-amber-200 transition-all font-semibold"><Edit3 size={16} /></button>
+                              <button onClick={() => { setOrderToDelete(order); setIsDeleteModalOpen(true); }} className="p-2 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg border border-rose-200 transition-all font-semibold"><Trash2 size={16} /></button>
                             </div>
                           </td>
                         </tr>
@@ -503,17 +502,13 @@ export const OrderManagement: React.FC = () => {
         </div>
       </div>
 
-      {/* MODAL CREATE/EDIT */}
+      {/* CREATE/EDIT modal: identical markup, uses saveMutation.isLoading */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center">
-              <h2 className="text-xl font-bold text-slate-900">
-                {editingOrder ? 'Modifier la commande' : 'Nouvelle commande'}
-              </h2>
-              <button onClick={handleCloseModal} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
-                <X size={20} className="text-slate-600" />
-              </button>
+              <h2 className="text-xl font-bold text-slate-900">{editingOrder ? 'Modifier la commande' : 'Nouvelle commande'}</h2>
+              <button onClick={handleCloseModal} className="p-2 hover:bg-slate-100 rounded-lg transition-colors"><X size={20} className="text-slate-600" /></button>
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 space-y-6">
@@ -521,125 +516,52 @@ export const OrderManagement: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Client *</label>
-                  <select
-                    name="clientId"
-                    required
-                    value={selectedClientId}
-                    onChange={(e) => setSelectedClientId(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none text-sm"
-                  >
+                  <select name="clientId" required value={selectedClientId} onChange={(e) => setSelectedClientId(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none text-sm">
                     <option value="">Sélectionner un client</option>
-                    {clients?.map(c => (
-                      <option key={c.id} value={c.id}>
-                        {c.name} ({c.type === 'FOURNISSEUR' ? 'Fournisseur' : 'Client'})
-                      </option>
-                    ))}
+                    {clients?.map((c: any) => (<option key={c.id} value={c.id}>{c.name} ({c.type === 'FOURNISSEUR' ? 'Fournisseur' : 'Client'})</option>))}
                   </select>
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Date commande *</label>
-                  <input
-                    type="date"
-                    name="orderDate"
-                    required
-                    defaultValue={editingOrder?.orderDate || new Date().toISOString().split('T')[0]}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none text-sm"
-                  />
+                  <input type="date" name="orderDate" required defaultValue={editingOrder?.orderDate || new Date().toISOString().split('T')[0]} className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none text-sm" />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Livraison prévue</label>
-                  <input
-                    type="date"
-                    name="deliveryDate"
-                    defaultValue={editingOrder?.deliveryDate || ''}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none text-sm"
-                  />
+                  <input type="date" name="deliveryDate" defaultValue={editingOrder?.deliveryDate || ''} className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none text-sm" />
                 </div>
               </div>
 
               {/* Status */}
               <div>
                 <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Statut</label>
-                <select
-                  name="status"
-                  defaultValue={editingOrder?.status || OrderStatus.EN_ATTENTE}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none text-sm"
-                >
+                <select name="status" defaultValue={editingOrder?.status || OrderStatus.EN_ATTENTE} className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none text-sm">
                   {Object.values(OrderStatus).map(s => <option key={s} value={s}>{STATUS_LABELS[s]?.label || s}</option>)}
                 </select>
               </div>
 
-
               {/* Items */}
               <div>
                 <div className="flex justify-between items-center mb-3">
-                  <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                    {isSupplier ? 'Matières premières' : 'Articles'}
-                  </label>
-                  <button
-                    type="button"
-                    onClick={addLine}
-                    className="flex items-center gap-1 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-semibold hover:bg-indigo-700 transition-all"
-                  >
-                    <Plus size={14} />
-                    Ajouter
-                  </button>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider">{isSupplier ? 'Matières premières' : 'Articles'}</label>
+                  <button type="button" onClick={addLine} className="flex items-center gap-1 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-semibold hover:bg-indigo-700 transition-all"><Plus size={14} />Ajouter</button>
                 </div>
                 <div className="space-y-3">
                   {items.map((item, idx) => (
                     <div key={item.id} className="flex gap-2 items-start p-3 bg-slate-50 rounded-lg border border-slate-200">
                       <div className="flex-1 grid grid-cols-1 md:grid-cols-5 gap-2">
-                        <select
-                          value={item.productId || ''}
-                          onChange={(e) => updateLine(item.id!, 'productId', e.target.value)}
-                          className="px-2 py-1.5 rounded border border-slate-200 text-sm outline-none focus:border-indigo-500"
-                        >
-                          <option value="">
-                            {isSupplier ? 'Sélectionner une matière première' : 'Sélectionner un produit'}
-                          </option>
-                          {isSupplier
-                            ? materials?.map(m => <option key={m.id} value={m.id}>{m.name}</option>)
-                            : products?.map(p => <option key={p.id} value={p.id}>{p.name}</option>)
-                          }
+                        <select value={item.productId || ''} onChange={(e) => updateLine(item.id!, 'productId', e.target.value)} className="px-2 py-1.5 rounded border border-slate-200 text-sm outline-none focus:border-indigo-500">
+                          <option value="">{isSupplier ? 'Sélectionner une matière première' : 'Sélectionner un produit'}</option>
+                          {isSupplier ? materials?.map((m: any) => <option key={m.id} value={m.id}>{m.name}</option>) : products?.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
                         </select>
-                        <input
-                          type="number"
-                          placeholder="Qté"
-                          value={item.quantity || ''}
-                          onChange={(e) => updateLine(item.id!, 'quantity', parseFloat(e.target.value) || 0)}
-                          className="px-2 py-1.5 rounded border border-slate-200 text-sm outline-none focus:border-indigo-500"
-                        />
-                        <input
-                          type="text"
-                          placeholder="Unité"
-                          value={item.unit || ''}
-                          onChange={(e) => updateLine(item.id!, 'unit', e.target.value)}
-                          className="px-2 py-1.5 rounded border border-slate-200 text-sm outline-none focus:border-indigo-500"
-                        />
-                        <input
-                          type="number"
-                          placeholder="PU"
-                          value={item.unitPrice || ''}
-                          onChange={(e) => updateLine(item.id!, 'unitPrice', parseFloat(e.target.value) || 0)}
-                          className="px-2 py-1.5 rounded border border-slate-200 text-sm outline-none focus:border-indigo-500"
-                        />
-                        <div className="px-2 py-1.5 bg-white rounded border border-slate-200 text-sm font-semibold text-slate-700">
-                          {item.totalItemPrice?.toLocaleString() || 0} DA
-                        </div>
+                        <input type="number" placeholder="Qté" value={item.quantity ?? ''} onChange={(e) => updateLine(item.id!, 'quantity', parseFloat(e.target.value) || 0)} className="px-2 py-1.5 rounded border border-slate-200 text-sm outline-none focus:border-indigo-500" />
+                        <input type="text" placeholder="Unité" value={item.unit ?? ''} onChange={(e) => updateLine(item.id!, 'unit', e.target.value)} className="px-2 py-1.5 rounded border border-slate-200 text-sm outline-none focus:border-indigo-500" />
+                        <input type="number" placeholder="PU" value={item.unitPrice ?? ''} onChange={(e) => updateLine(item.id!, 'unitPrice', parseFloat(e.target.value) || 0)} className="px-2 py-1.5 rounded border border-slate-200 text-sm outline-none focus:border-indigo-500" />
+                        <div className="px-2 py-1.5 bg-white rounded border border-slate-200 text-sm font-semibold text-slate-700">{(item.totalItemPrice ?? 0).toLocaleString()} DA</div>
                       </div>
-                      {items.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => removeLine(item.id!)}
-                          className="p-1.5 text-rose-600 hover:bg-rose-50 rounded transition-colors"
-                        >
-                          <X size={16} />
-                        </button>
-                      )}
+                      {items.length > 1 && <button type="button" onClick={() => removeLine(item.id!)} className="p-1.5 text-rose-600 hover:bg-rose-50 rounded transition-colors"><X size={16} /></button>}
                     </div>
                   ))}
                 </div>
-
               </div>
 
               {/* Advance Payment */}
@@ -647,54 +569,32 @@ export const OrderManagement: React.FC = () => {
                 <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Versement</label>
                 <div className="relative">
                   <DollarSign size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <input 
-                    type="number" 
-                    step="1" 
-                    value={advancePayment}
-                    onChange={(e) => setAdvancePayment(parseFloat(e.target.value) || 0)}
-                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
-                    placeholder="10 000 DA"
-                  />
+                  <input type="number" step="1" value={advancePayment} onChange={(e) => setAdvancePayment(parseFloat(e.target.value) || 0)} className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all" placeholder="10 000 DA" />
                 </div>
-
               </div>
 
               {/* Notes */}
               <div>
                 <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Notes internes</label>
-                <textarea
-                  name="notes"
-                  rows={3}
-                  defaultValue={editingOrder?.notes || ''}
-                  placeholder="Instructions pour l'atelier..."
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none text-sm resize-none"
-                />
+                <textarea name="notes" rows={3} defaultValue={editingOrder?.notes || ''} placeholder="Instructions pour l'atelier..." className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none text-sm resize-none" />
               </div>
-                <div className="mt-3 flex justify-end">
-                  <div className="px-4 py-2 bg-indigo-50 rounded-lg mr-2">
-                    <span className="text-xs font-semibold text-indigo-900 uppercase tracking-wider mr-2">Total:</span>
-                    <span className="text-lg font-bold text-indigo-600">{totalOrderPrice.toLocaleString()} DA</span>
-                  </div>
-                    <div className="px-4 py-2 bg-rose-50 rounded-lg">
-                    <span className="text-xs font-semibold text-rose-900 uppercase tracking-wider mr-2">Reste à payer:</span>
-                    <span className="text-lg font-bold text-rose-600">{remainingAmount.toLocaleString()} DA</span>
-                  </div>
+
+              <div className="mt-3 flex justify-end">
+                <div className="px-4 py-2 bg-indigo-50 rounded-lg mr-2">
+                  <span className="text-xs font-semibold text-indigo-900 uppercase tracking-wider mr-2">Total:</span>
+                  <span className="text-lg font-bold text-indigo-600">{totalOrderPrice.toLocaleString()} DA</span>
                 </div>
+                <div className="px-4 py-2 bg-rose-50 rounded-lg">
+                  <span className="text-xs font-semibold text-rose-900 uppercase tracking-wider mr-2">Reste à payer:</span>
+                  <span className="text-lg font-bold text-rose-600">{remainingAmount.toLocaleString()} DA</span>
+                </div>
+              </div>
+
               {/* Actions */}
               <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
-                <button
-                  type="button"
-                  onClick={handleCloseModal}
-                  className="px-4 py-2 text-slate-700 bg-white border border-slate-200 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-all"
-                >
-                  Annuler
-                </button>
-                <button
-                  type="submit"
-                  disabled={saveMutation.isPending}
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-all disabled:opacity-50"
-                >
-                  {saveMutation.isPending ? 'Enregistrement...' : editingOrder ? 'Modifier' : 'Créer'}
+                <button type="button" onClick={handleCloseModal} className="px-4 py-2 text-slate-700 bg-white border border-slate-200 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-all">Annuler</button>
+                <button type="submit" disabled={saveMutation.isLoading} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-all disabled:opacity-50">
+                  {saveMutation.isLoading ? 'Enregistrement...' : editingOrder ? 'Modifier' : 'Créer'}
                 </button>
               </div>
             </form>
@@ -702,7 +602,7 @@ export const OrderManagement: React.FC = () => {
         </div>
       )}
 
-      {/* MODAL DELETE */}
+      {/* DELETE modal */}
       {isDeleteModalOpen && orderToDelete && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
@@ -712,477 +612,231 @@ export const OrderManagement: React.FC = () => {
               </div>
               <h2 className="text-xl font-bold text-slate-900">Supprimer la commande</h2>
             </div>
-            <p className="text-slate-600 mb-6">
-              Êtes-vous sûr de vouloir supprimer la commande <strong>#{orderToDelete.id.slice(0,8).toUpperCase()}</strong> ? Cette action est irréversible.
-            </p>
+            <p className="text-slate-600 mb-6">Êtes-vous sûr de vouloir supprimer la commande <strong>#{orderToDelete.id.slice(0,8).toUpperCase()}</strong> ? Cette action est irréversible.</p>
             <div className="flex justify-end gap-3">
-              <button
-                onClick={() => { setIsDeleteModalOpen(false); setOrderToDelete(null); }}
-                className="px-4 py-2 text-slate-700 bg-white border border-slate-200 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-all"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={() => deleteMutation.mutate(orderToDelete.id)}
-                disabled={deleteMutation.isPending}
-                className="px-4 py-2 bg-rose-600 text-white rounded-lg text-sm font-semibold hover:bg-rose-700 transition-all disabled:opacity-50"
-              >
-                {deleteMutation.isPending ? 'Suppression...' : 'Supprimer'}
-              </button>
+              <button onClick={() => { setIsDeleteModalOpen(false); setOrderToDelete(null); }} className="px-4 py-2 text-slate-700 bg-white border border-slate-200 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-all">Annuler</button>
+              <button onClick={() => deleteMutation.mutate(orderToDelete.id)} disabled={deleteMutation.isLoading} className="px-4 py-2 bg-rose-600 text-white rounded-lg text-sm font-semibold hover:bg-rose-700 transition-all disabled:opacity-50">{deleteMutation.isLoading ? 'Suppression...' : 'Supprimer'}</button>
             </div>
           </div>
         </div>
       )}
 
-{/* MODAL PRINT - Devenu FICHE D'ATELIER / FABRICATION */}
-{isPrintModalOpen && selectedOrderForPrint && (
-  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-10">
-    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-      <div className="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center print:hidden">
-        <h2 className="text-xl font-bold text-slate-900">Fiche de Fabrication</h2>
-        <button onClick={() => setIsPrintModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
-          <X size={20} className="text-slate-600" />
-        </button>
-      </div>
-      
-      <div className="p-8 space-y-8 print:p-0">
-        {/* EN-TÊTE TECHNIQUE */}
-        <div className="flex justify-between items-start border-b-2 border-slate-900 pb-6">
-          <div>
-            <h1 className="text-3xl font-black text-slate-900 tracking-tighter">FICHE ATELIER</h1>
-
-          </div>
-          <div className="text-right">
-            <div className="flex items-center justify-end gap-2 text-slate-600 mb-1">
-              <Calendar size={16} />
-              <span className="text-sm font-semibold">Date: {new Date(selectedOrderForPrint.orderDate).toLocaleDateString('fr-FR')}</span>
-            </div>
-            <div className="flex items-center justify-end gap-2 text-indigo-600">
-              <Truck size={16} />
-              <span className="text-sm font-bold">Livraison {selectedOrderForPrint.deliveryDate ? new Date(selectedOrderForPrint.deliveryDate).toLocaleDateString('fr-FR') : ''}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* INFOS CLIENT & STATUT */}
-        <div className="grid grid-cols-2 gap-8">
-          <div className="border-l-4 border-slate-200 pl-4">
-            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Destinataire / Client</h3>
-            <p className="text-5xl font-bold text-slate-900">{clients?.find(c => c.id === selectedOrderForPrint.clientId)?.name}</p>
-          </div>
-
-        </div>
-
-        {/* TABLEAU DE FABRICATION (SANS PRIX) */}
-        <div>
-          <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-4 flex items-center gap-2">
-            <Package size={18} />
-            LISTE DES ARTICLES À FABRIQUER
-          </h3>
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="bg-slate-100 border-y-2 border-slate-900">
-                <th className="px-4 py-3 text-left text-sm font-black text-slate-900">RÉFÉRENCE / PRODUIT</th>
-                <th className="px-4 py-3 text-center text-sm font-black text-slate-900 w-32">QUANTITÉ</th>
-                <th className="px-4 py-3 text-center text-sm font-black text-slate-900 w-32">UNITÉ</th>
-                <th className="px-4 py-3 text-center text-sm font-black text-slate-900 w-20">PRÊT</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200">
-              {selectedOrderForPrint.items?.map((item, idx) => {
-                const p = products?.find(prod => prod.id === item.productId);
-                return (
-                  <tr key={idx} className="border-b border-slate-100">
-                    <td className="px-4 py-4">
-                      <p className="text-2xl font-bold text-lg text-slate-900">{p?.name || 'Produit Inconnu'}</p>
-                      <p className="text-xs text-slate-500 font-mono">ID: {p?.reference || 'N/A'}</p>
-                    </td>
-                    <td className="px-4 py-4 text-center">
-                      <span className="text-2xl font-black text-slate-900">{item.quantity}</span>
-                    </td>
-                    <td className="px-4 py-4 text-center text-slate-600 font-medium uppercase text-sm">
-                      {item.unit}
-                    </td>
-                    <td className="px-4 py-4 text-center">
-                      <div className="w-6 h-6 border-2 border-slate-300 rounded mx-auto"></div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-
-        {/* INSTRUCTIONS SPÉCIALES (TRÈS VISIBLES) */}
-        <div className="bg-slate-50 border-2 border-dashed border-slate-300 p-1 rounded-xl">
-          <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-3 flex items-center gap-2">
-            <Info size={18} className="text-amber-500" />
-            INSTRUCTIONS DE FABRICATION / NOTES
-          </h3>
-          <p className="text-xl text-slate-800 font-medium leading-relaxed italic">
-            {selectedOrderForPrint.notes || "Aucune instruction particulière pour cette commande."}
-          </p>
-        </div>
-
-
-        {/* BOUTONS ACTIONS (CACHÉS À L'IMPRESSION) */}
-        <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 print:hidden">
-          <button
-            onClick={() => setIsPrintModalOpen(false)}
-            className="px-4 py-2 text-slate-700 bg-white border border-slate-200 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-all"
-          >
-            Fermer
-          </button>
-          <button
-            onClick={() => window.print()}
-            className="flex items-center gap-2 px-6 py-2 bg-indigo-600 text-white rounded-lg text-sm font-bold hover:bg-indigo-800 transition-all shadow-lg"
-          >
-            <Printer size={18} />
-            Lancer la fabrication
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-)}
-
-{/* MODAL DETAILS */}
-{isDetailsModalOpen && selectedOrder && (
-  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-      <div className="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center">
-        <h2 className="text-xl font-bold text-slate-900">Détails de la commande #{selectedOrder.id.slice(0,8).toUpperCase()}</h2>
-        <button onClick={closeDetailsModal} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
-          <X size={20} className="text-slate-600" />
-        </button>
-      </div>
-      
-      <div className="p-6 space-y-6">
-        {/* EN-TÊTE PRINCIPALE */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
-            <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Client</p>
-            <p className="font-bold text-slate-900">{clients?.find(c => c.id === selectedOrder.clientId)?.name}</p>
-          </div>
-          <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
-            <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Date commande</p>
-            <p className="font-bold text-slate-900">{new Date(selectedOrder.orderDate).toLocaleDateString('fr-FR')}</p>
-          </div>
-          <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
-            <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Livraison prévue</p>
-            <p className="font-bold text-slate-900">
-              {selectedOrder.deliveryDate 
-                ? new Date(selectedOrder.deliveryDate).toLocaleDateString('fr-FR') 
-                : 'Non définie'}
-            </p>
-          </div>
-          <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
-            <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Référence</p>
-            <p className="font-mono font-bold text-slate-900">#{selectedOrder.id.slice(0,8).toUpperCase()}</p>
-          </div>
-        </div>
-
-        {/* STATUTS & PAIEMENT */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="p-4 bg-indigo-50 rounded-lg border border-indigo-200">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-xs font-semibold text-indigo-900 uppercase tracking-wider mb-1">Statut actuel</p>
-                <div className="flex items-center gap-2 mt-1">
-                  {(() => {
-                    const config = STATUS_LABELS[selectedOrder.status];
-                    return (
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium ${config.bgColor} ${config.textColor}`}>
-                        {config.icon}
-                        {config.label}
-                      </span>
-                    );
-                  })()}
+      {/* DETAILS MODAL */}
+      {isDetailsModalOpen && selectedOrder && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center">
+                  <FileText size={20} className="text-indigo-600" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900">Détails Commande #{selectedOrder.id.slice(0,8).toUpperCase()}</h2>
+                  <p className="text-xs text-slate-500">Créée le {new Date(selectedOrder.createdAt || '').toLocaleDateString('fr-FR')}</p>
                 </div>
               </div>
-              <button 
-                onClick={() => setIsStatusModalOpen(true)}
-                className="p-1.5 text-indigo-600 hover:bg-indigo-100 rounded transition-colors"
-                title="Modifier le statut"
-              >
-                <Edit3 size={16} />
-              </button>
+              <button onClick={closeDetailsModal} className="p-2 hover:bg-slate-100 rounded-lg transition-colors"><X size={20} className="text-slate-600" /></button>
             </div>
-          </div>
-          <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-200">
-            <p className="text-xs font-semibold text-emerald-900 uppercase tracking-wider mb-1">Statut paiement</p>
-            <div className="flex items-center gap-2 mt-1">
-              {(() => {
-                const config = PAYMENT_LABELS[selectedOrder.paymentStatus];
-                return (
-                  <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium ${config.bgColor} ${config.textColor}`}>
-                    {config.label}
-                  </span>
-                );
-              })()}
-            </div>
-          </div>
-        </div>
 
-        {/* ARTICLES */}
-        <div>
-          <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-3 flex items-center gap-2">
-            <Package size={14} />
-            Articles commandés ({selectedOrder.items?.length || 0})
-          </h3>
-          <div className="space-y-3">
-            {selectedOrder.items?.map((item, idx) => {
-              const product = products?.find(p => p.id === item.productId);
-              return (
-                <div key={idx} className="flex justify-between items-center p-4 bg-white rounded-lg border border-slate-200 shadow-sm">
-                  <div className="flex-1">
-                    <p className="font-semibold text-slate-900">{product?.name || 'Produit inconnu'}</p>
-                    <div className="flex flex-wrap gap-3 mt-1 text-xs text-slate-600">
-                      <span>{item.quantity} {item.unit}</span>
-                      <span>× {item.unitPrice?.toLocaleString()} DA</span>
-                      {product && (
-                        <span className="bg-slate-100 px-2 py-0.5 rounded">
-                          Ref: {product.reference}
-                        </span>
-                      )}
+            <div className="p-6 space-y-8">
+              {/* Infos Client & Statut */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Client</span>
+                  <p className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                    <User size={14} className="text-indigo-500" />
+                    {(clients ?? []).find((c: any) => c.id === selectedOrder.clientId)?.name || 'Inconnu'}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Date de livraison</span>
+                  <p className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                    <Calendar size={14} className="text-amber-500" />
+                    {selectedOrder.deliveryDate ? new Date(selectedOrder.deliveryDate).toLocaleDateString('fr-FR') : 'Non définie'}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Statut Actuel</span>
+                  <div>
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold ${STATUS_LABELS[selectedOrder.status]?.bgColor} ${STATUS_LABELS[selectedOrder.status]?.textColor}`}>
+                      {STATUS_LABELS[selectedOrder.status]?.icon}
+                      {STATUS_LABELS[selectedOrder.status]?.label}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Table des Articles */}
+              <div className="border border-slate-100 rounded-xl overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50 border-b border-slate-100">
+                    <tr>
+                      <th className="px-4 py-3 text-left font-semibold text-slate-600">Article</th>
+                      <th className="px-4 py-3 text-center font-semibold text-slate-600">Quantité</th>
+                      <th className="px-4 py-3 text-right font-semibold text-slate-600">Prix Unitaire</th>
+                      <th className="px-4 py-3 text-right font-semibold text-slate-600">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {selectedOrder.items?.map((item, idx) => {
+                      const product = (products ?? []).find((p: any) => p.id === item.productId) || (materials ?? []).find((m: any) => m.id === item.productId);
+                      return (
+                        <tr key={idx}>
+                          <td className="px-4 py-3 font-medium text-slate-800">{product?.name || 'Produit inconnu'}</td>
+                          <td className="px-4 py-3 text-center text-slate-600">{item.quantity} {item.unit}</td>
+                          <td className="px-4 py-3 text-right text-slate-600">{(item.unitPrice ?? 0).toLocaleString()} DA</td>
+                          <td className="px-4 py-3 text-right font-bold text-slate-900">{(item.totalItemPrice ?? 0).toLocaleString()} DA</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot className="bg-slate-50/50 font-bold">
+                    <tr>
+                      <td colSpan={3} className="px-4 py-3 text-right text-slate-600">Total Commande</td>
+                      <td className="px-4 py-3 text-right text-indigo-600 text-lg">{(selectedOrder.totalPrice ?? 0).toLocaleString()} DA</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+
+              {/* Paiement & Notes */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                  <h4 className="text-xs font-bold text-slate-500 uppercase mb-3">Résumé Financier</h4>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-600">Déjà versé:</span>
+                      <span className="font-bold text-emerald-600">{(selectedOrder.paidAmount ?? 0).toLocaleString()} DA</span>
+                    </div>
+                    <div className="flex justify-between text-sm border-t border-slate-200 pt-2">
+                      <span className="text-slate-600">Reste à payer:</span>
+                      <span className="font-bold text-rose-600">{((selectedOrder.totalPrice ?? 0) - (selectedOrder.paidAmount ?? 0)).toLocaleString()} DA</span>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-bold text-slate-900">{item.totalItemPrice?.toLocaleString()} DA</p>
+                </div>
+                <div className="bg-amber-50/50 p-4 rounded-xl border border-amber-100">
+                  <h4 className="text-xs font-bold text-amber-600 uppercase mb-2">Notes / Instructions</h4>
+                  <p className="text-sm text-slate-700 italic">{selectedOrder.notes || "Aucune instruction particulière."}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PRINT MODAL */}
+      {isPrintModalOpen && selectedOrderForPrint && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[95vh]">
+            <div className="bg-slate-900 px-6 py-4 flex justify-between items-center text-white">
+              <div className="flex items-center gap-2">
+                <Printer size={20} />
+                <span className="font-bold">Aperçu avant impression</span>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-1.5 bg-emerald-500 hover:bg-emerald-600 rounded-lg text-sm font-bold transition-all">
+                  Imprimer
+                </button>
+                <button onClick={() => setIsPrintModalOpen(false)} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors">
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-8 bg-slate-100">
+              {/* LE BON (Format A4) */}
+              <div id="printable-area" className="bg-white w-full max-w-[210mm] mx-auto shadow-lg p-10 min-h-[297mm] text-slate-900 font-serif">
+                {/* Header du Bon */}
+                <div className="flex justify-between items-start border-b-2 border-slate-900 pb-6 mb-8">
+                  <div>
+                    <h1 className="text-4xl font-black tracking-tighter text-slate-900">FABRIKTI</h1>
+                    <p className="text-sm font-sans text-slate-500 mt-1">Atelier de Fabrication de Chaussures</p>
+                  </div>
+                  <div className="text-right font-sans">
+                    <h2 className="text-xl font-bold text-slate-900 uppercase">Bon de Commande</h2>
+                    <p className="text-lg font-bold text-indigo-600">N° {selectedOrderForPrint.id.slice(0,8).toUpperCase()}</p>
+                    <p className="text-sm text-slate-500">Date: {new Date(selectedOrderForPrint.orderDate).toLocaleDateString('fr-FR')}</p>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        </div>
 
-        {/* MONTANT TOTAL */}
-        <div className="p-5 bg-gradient-to-r from-indigo-600 to-blue-600 rounded-xl text-white shadow-lg">
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="text-sm font-medium opacity-90">Montant total</p>
-              <p className="text-2xl font-bold mt-1">{selectedOrder.totalPrice.toLocaleString()} DA</p>
-            </div>
-            <div className="text-right">
-              <p className="text-xs opacity-80">Payé: {selectedOrder.paidAmount?.toLocaleString() || 0} DA</p>
-              <p className="text-xs mt-1">
-                Reste: <span className="font-bold">
-                  {(selectedOrder.totalPrice - (selectedOrder.paidAmount || 0)).toLocaleString()} DA
-                </span>
-              </p>
-            </div>
-          </div>
-        </div>
+                {/* Adresses */}
+                <div className="grid grid-cols-2 gap-12 mb-10 font-sans">
+                  <div>
+                    <h3 className="text-[10px] font-bold text-slate-400 uppercase mb-2">Émetteur</h3>
+                    <p className="font-bold">Atelier Fabrikti</p>
+                    <p className="text-sm text-slate-600">Zone Industrielle, Lot 42</p>
+                    <p className="text-sm text-slate-600">Tél: +213 (0) 555 00 00 00</p>
+                  </div>
+                  <div>
+                    <h3 className="text-[10px] font-bold text-slate-400 uppercase mb-2">Destinataire / Client</h3>
+                    <p className="font-bold text-lg">{(clients ?? []).find((c: any) => c.id === selectedOrderForPrint.clientId)?.name || ''}</p>
+                    <p className="text-sm text-slate-600">Client ID: {selectedOrderForPrint.clientId?.slice(0,8) ?? ''}</p>
+                  </div>
+                </div>
 
-        {/* NOTES INTERNES */}
-        <div>
-          <div className="flex justify-between items-center mb-3">
-            <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wider flex items-center gap-2">
-              <Info size={14} />
-              Notes internes
-            </h3>
-            <button 
-              onClick={() => setIsNotesModalOpen(true)}
-              className="p-1.5 text-slate-600 hover:bg-slate-100 rounded transition-colors"
-              title="Modifier les notes"
-            >
-              <Edit3 size={14} />
-            </button>
-          </div>
-          {selectedOrder.notes ? (
-            <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
-              <p className="text-amber-900 whitespace-pre-line">{selectedOrder.notes}</p>
-            </div>
-          ) : (
-            <button
-              onClick={() => setIsNotesModalOpen(true)}
-              className="w-full text-left p-4 bg-slate-50 rounded-lg border border-dashed border-slate-200 hover:bg-slate-100 transition-colors"
-            >
-              <p className="text-slate-500 italic text-sm text-center">
-                + Ajouter des notes internes
-              </p>
-            </button>
-          )}
-        </div>
+                {/* Table Articles */}
+                <table className="w-full mb-10 font-sans">
+                  <thead>
+                    <tr className="border-b-2 border-slate-900">
+                      <th className="py-3 text-left text-sm font-bold uppercase">Désignation</th>
+                      <th className="py-3 text-center text-sm font-bold uppercase">Qté</th>
+                      <th className="py-3 text-right text-sm font-bold uppercase">P.U (DA)</th>
+                      <th className="py-3 text-right text-sm font-bold uppercase">Total (DA)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {selectedOrderForPrint.items?.map((item, idx) => {
+                      const product = (products ?? []).find((p: any) => p.id === item.productId) || (materials ?? []).find((m: any) => m.id === item.productId);
+                      return (
+                        <tr key={idx}>
+                          <td className="py-4 text-sm font-medium">{product?.name}</td>
+                          <td className="py-4 text-center text-sm">{item.quantity} {item.unit}</td>
+                          <td className="py-4 text-right text-sm">{(item.unitPrice ?? 0).toLocaleString()}</td>
+                          <td className="py-4 text-right text-sm font-bold">{(item.totalItemPrice ?? 0).toLocaleString()}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
 
-        {/* TIMELINE DES ÉTAPES (SIMULÉE) */}
-        <div>
-          <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-3 flex items-center gap-2">
-            <Clock size={14} />
-            Historique des étapes
-          </h3>
-          <div className="space-y-4">
-            {[
-              { date: selectedOrder.orderDate, status: 'Commande créée', icon: <Plus size={14} /> },
-              ...(selectedOrder.status === OrderStatus.EN_PREPARATION ? [{ date: '', status: 'En préparation', icon: <Package size={14} /> }] : []),
-              ...(selectedOrder.status === OrderStatus.EN_STOCK ? [{ date: '', status: 'En stock', icon: <Database size={14} /> }] : []),
-              ...(selectedOrder.status === OrderStatus.LIVREE ? [{ date: selectedOrder.deliveryDate, status: 'Livrée', icon: <Truck size={14} /> }] : []),
-              ...(selectedOrder.status === OrderStatus.ANNULEE ? [{ date: '', status: 'Annulée', icon: <Ban size={14} /> }] : [])
-            ]
-              .filter(Boolean)
-              .map((step: any, idx) => (
-                <div key={idx} className="flex gap-3">
-                  <div className="flex flex-col items-center">
-                    <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
-                      {step.icon}
+                {/* Totaux */}
+                <div className="flex justify-end font-sans">
+                  <div className="w-64 space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Total Brut:</span>
+                      <span>{(selectedOrderForPrint.totalPrice ?? 0).toLocaleString()} DA</span>
                     </div>
-                    {idx < 3 && <div className="w-0.5 h-full bg-slate-200 my-1"></div>}
-                  </div>
-                  <div className="pb-2">
-                    <p className="font-medium text-slate-900">{step.status}</p>
-                    {step.date && (
-                      <p className="text-xs text-slate-500 mt-1">
-                        {new Date(step.date).toLocaleString('fr-FR', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </p>
-                    )}
+                    <div className="flex justify-between text-sm font-bold border-t border-slate-900 pt-2">
+                      <span>NET À PAYER:</span>
+                      <span className="text-lg">{(selectedOrderForPrint.totalPrice ?? 0).toLocaleString()} DA</span>
+                    </div>
+                    <div className="flex justify-between text-xs text-slate-500 pt-4">
+                      <span>Versement:</span>
+                      <span>{(selectedOrderForPrint.paidAmount ?? 0).toLocaleString()} DA</span>
+                    </div>
+                    <div className="flex justify-between text-sm font-bold text-rose-600">
+                      <span>Reste:</span>
+<span>{((selectedOrderForPrint.totalPrice ?? 0) - (selectedOrderForPrint.paidAmount ?? 0)).toLocaleString()} DA</span>                      </div>
                   </div>
                 </div>
-              ))}
+
+                {/* Footer Signature */}
+                <div className="mt-20 grid grid-cols-2 gap-10 font-sans text-center">
+                  <div className="border-t border-slate-200 pt-4">
+                    <p className="text-xs font-bold text-slate-400 uppercase">Cachet & Signature Atelier</p>
+                  </div>
+                  <div className="border-t border-slate-200 pt-4">
+                    <p className="text-xs font-bold text-slate-400 uppercase">Signature Client</p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
+      )}
 
-        {/* BOUTONS ACTIONS */}
-        <div className="flex justify-center gap-3 pt-4 border-t border-slate-200">
-          <button
-            onClick={closeDetailsModal}
-            className="px-8 py-4 text-slate-700 bg-white border border-slate-200 rounded-lg text-sm font-semibold hover:bg-indigo-600 hover:text-white transition-all"
-          >
-            Fermer
-          </button>
-          {/*
-          <Link to={`/orders/${selectedOrder.id}`} className="ml-auto">
-            <button className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-all">
-              <FileText size={16} />
-              Voir détails complets
-            </button>
-          </Link>
-          */}
-        </div>
-      </div>
-    </div>
-  </div>
-)}
-
-{/* MODAL MODIFICATION STATUT */}
-{isStatusModalOpen && selectedOrder && (
-  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
-      <div className="border-b border-slate-200 px-6 py-4 flex justify-between items-center">
-        <h3 className="text-lg font-bold text-slate-900">Modifier le statut</h3>
-        <button 
-          onClick={() => setIsStatusModalOpen(false)}
-          className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-        >
-          <X size={20} className="text-slate-600" />
-        </button>
-      </div>
-      
-      <div className="p-6">
-        <div className="space-y-3">
-          {Object.values(OrderStatus).map(status => {
-            const config = STATUS_LABELS[status];
-            return (
-              <button
-                key={status}
-                onClick={() => {
-                  saveMutation.mutate({
-                    id: selectedOrder.id,
-                    status: status
-                  });
-                  setIsStatusModalOpen(false);
-                }}
-                className={`w-full flex items-center gap-3 p-3 rounded-lg border text-left transition-all ${
-                  selectedOrder.status === status
-                    ? 'border-indigo-500 bg-indigo-50'
-                    : 'border-slate-200 hover:bg-slate-50'
-                }`}
-              >
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                  selectedOrder.status === status 
-                    ? 'bg-indigo-500 text-white' 
-                    : `${config.bgColor} ${config.textColor}`
-                }`}>
-                  {config.icon}
-                </div>
-                <span className={`font-medium ${
-                  selectedOrder.status === status 
-                    ? 'text-indigo-700' 
-                    : 'text-slate-700'
-                }`}>
-                  {config.label}
-                </span>
-                {selectedOrder.status === status && (
-                  <CheckCircle2 size={18} className="ml-auto text-indigo-500" />
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  </div>
-)}
-
-{/* MODAL MODIFICATION NOTES */}
-{isNotesModalOpen && selectedOrder && (
-  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
-      <div className="border-b border-slate-200 px-6 py-4 flex justify-between items-center">
-        <h3 className="text-lg font-bold text-slate-900">Notes internes</h3>
-        <button 
-          onClick={() => setIsNotesModalOpen(false)}
-          className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-        >
-          <X size={20} className="text-slate-600" />
-        </button>
-      </div>
-      
-      <form 
-        onSubmit={(e) => {
-          e.preventDefault();
-          const formData = new FormData(e.target as HTMLFormElement);
-          saveMutation.mutate({
-            id: selectedOrder.id,
-            notes: formData.get('notes') as string
-          });
-          setIsNotesModalOpen(false);
-        }}
-        className="p-6 space-y-4"
-      >
-        <div>
-          <textarea
-            name="notes"
-            defaultValue={selectedOrder.notes || ''}
-            rows={5}
-            placeholder="Instructions pour l'atelier, détails spécifiques..."
-            className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none text-sm resize-none"
-          />
-        </div>
-        <div className="flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={() => setIsNotesModalOpen(false)}
-            className="px-4 py-2 text-slate-700 bg-white border border-slate-200 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-all"
-          >
-            Annuler
-          </button>
-          <button
-            type="submit"
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-all"
-          >
-            Enregistrer
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-)}
     </div>
   );
 };
+
+export default OrderManagement;
