@@ -1,11 +1,12 @@
 
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, LogOut, ChevronRight, User as UserIcon, Bell } from 'lucide-react';
+import { Menu, X, LogOut, ChevronRight, Bell } from 'lucide-react';
 import { useUIStore } from '../store/useStore';
 import { useAuthStore } from '../store/authStore';
 import { NAVIGATION_ITEMS } from '../constants';
 import { FloatingCalculator } from './FloatingCalculator';
+import tchounaPhoto from '../assets/tchouna.jpg';
 
 const SidebarItem: React.FC<{ item: typeof NAVIGATION_ITEMS[0]; isActive: boolean; onClick?: () => void }> = ({ item, isActive, onClick }) => {
   const { themeColor } = useUIStore();
@@ -84,8 +85,8 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           {/* User Section Sidebar (Bottom) */}
           <div className="p-4 mt-4 border-t border-slate-800/50">
              <div className="flex items-center gap-3 px-4 py-4 mb-4 bg-slate-900/40 rounded-2xl border border-slate-800/30">
-              <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center overflow-hidden border border-slate-700">
-                  <UserIcon size={20} className="text-slate-400" /> 
+              <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center overflow-hidden border border-slate-700">
+                  <img src={tchounaPhoto} alt="Tchouna" className="h-full w-full object-cover" />
               </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-bold text-white truncate">{user?.name || 'Tchouna'}</p>
@@ -121,8 +122,8 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
               </div>
             </div>
             <div className="hidden lg:block">
-               <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-0.5">Console Admin</p>
-               <h2 className="text-xl font-black text-slate-900 leading-tight">Bienvenue, {user?.name?.split(' ')[0] || 'Admin'}</h2>
+               <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-0.5">Console Tchouna</p>
+               <h2 className="text-xl font-black text-slate-900 leading-tight">Bienvenue, {user?.name?.split(' ')[0] || 'Tchouna'}</h2>
             </div>
           </div>
           
@@ -138,14 +139,14 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
             <div className="flex items-center gap-3 group cursor-pointer">
               <div className="text-right hidden sm:block">
-                <p className="text-sm font-black text-slate-900 group-hover:text-blue-600 transition-colors">{user?.name || 'Admin'}</p>
+                <p className="text-sm font-black text-slate-900 group-hover:text-blue-600 transition-colors">{user?.name || 'Tchouna'}</p>
                 <div className="flex items-center justify-end gap-1">
                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">En ligne</p>
                 </div>
               </div>
               <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-${themeColor}-100 flex items-center justify-center font-black border-2 border-white shadow-xl shadow-slate-200 overflow-hidden`}>
-                <UserIcon size={22} className={`text-${themeColor}-600`} />
+                <img src={tchounaPhoto} alt="Tchouna" className="h-full w-full object-cover" />
               </div>
             </div>
           </div>
