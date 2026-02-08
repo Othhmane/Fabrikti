@@ -3,7 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../api/supabase'; // <-- adapte le chemin si besoin
-import { OrderStatus, PaymentStatus, Order, OrderItem } from '../../types';
+import { OrderStatus, PaymentStatus, Order, OrderItem, ProductConsumption } from '../../types';
 import {
   Clock, Package, Truck, Database, Plus, Search,
   X, Ban, Trash2, Edit3, ShoppingCart, CheckCircle2,
@@ -85,9 +85,25 @@ const fetchClients = async () => {
 };
 
 const fetchProducts = async () => {
-  const { data, error } = await supabase.from('products').select('*').order('name', { ascending: true });
+  const { data: productsData, error } = await supabase.from('products').select('*').order('name', { ascending: true });
   if (error) throw error;
-  return (data ?? []).map(mapProductRow);
+
+  const { data: pcData, error: pcErr } = await supabase.from('product_consumption').select('*');
+  if (pcErr) throw pcErr;
+
+  const consumptionsByProduct: Record<string, ProductConsumption[]> = {};
+  (pcData ?? []).forEach((c: any) => {
+    if (!consumptionsByProduct[c.product_id]) consumptionsByProduct[c.product_id] = [];
+    consumptionsByProduct[c.product_id].push({
+      materialId: c.material_id,
+      quantity: Number(c.quantity ?? 0),
+    });
+  });
+
+  return (productsData ?? []).map((row: any) => ({
+    ...mapProductRow(row),
+    consumptionFormula: consumptionsByProduct[row.id] || [],
+  }));
 };
 
 const fetchMaterials = async () => {
@@ -163,6 +179,28 @@ const deleteOrderSupabase = async (id: string) => {
   const { error } = await supabase.from('orders').delete().eq('id', id);
   if (error) throw error;
   return true;
+};
+
+const getOrderDateInfo = (order: Partial<Order>) => {
+  const raw = (order.orderDate ?? order.createdAt ?? '') as any;
+  if (typeof raw === 'string') {
+    const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (m) {
+      return { key: `${m[1]}-${m[2]}-${m[3]}`, dd: m[3], mm: m[2] };
+    }
+  }
+  const d = new Date(raw);
+  if (isNaN(d.getTime())) return null;
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  return { key: `${d.getFullYear()}-${mm}-${dd}`, dd, mm };
+};
+
+const getOrderSortTime = (order: Partial<Order>) => {
+  const t1 = new Date((order.orderDate ?? order.createdAt ?? 0) as any).getTime();
+  if (!isNaN(t1)) return t1;
+  const t2 = new Date((order.createdAt ?? 0) as any).getTime();
+  return isNaN(t2) ? 0 : t2;
 };
 
 /* ---------- Component ---------- */
@@ -335,6 +373,73 @@ const saveMutation = useMutation({
     return { total, totalAmount, delivered, pending };
   }, [filteredOrders]);
 
+  const bonNumberById = useMemo(() => {
+    const map: Record<string, string> = {};
+    const buckets: Record<string, Order[]> = {};
+    (orders ?? []).forEach((o: Order) => {
+      const info = getOrderDateInfo(o);
+      if (!info) return;
+      if (!buckets[info.key]) buckets[info.key] = [];
+      buckets[info.key].push(o);
+    });
+    Object.values(buckets).forEach((list) => {
+      list.sort((a, b) => {
+        const t = getOrderSortTime(a) - getOrderSortTime(b);
+        if (t !== 0) return t;
+        return String(a.id).localeCompare(String(b.id));
+      });
+      list.forEach((o, idx) => {
+        const info = getOrderDateInfo(o);
+        if (!info) return;
+        map[o.id] = `${info.dd}${info.mm}${String(idx + 1).padStart(3, '0')}`;
+      });
+    });
+    return map;
+  }, [orders]);
+
+  const selectedOrderClient = useMemo(
+    () => (clients ?? []).find((c: any) => c.id === selectedOrder?.clientId),
+    [clients, selectedOrder]
+  );
+  const isSelectedOrderSupplier = selectedOrderClient?.type === 'FOURNISSEUR';
+
+  const materialRequirements = useMemo(() => {
+    if (!selectedOrder || isSelectedOrderSupplier) return [];
+    const acc: Record<string, any> = {};
+    (selectedOrder.items ?? []).forEach((item) => {
+      const product: any = (products ?? []).find((p: any) => p.id === item.productId);
+      const formula = product?.consumptionFormula ?? [];
+      formula.forEach((f: any) => {
+        const material: any = (materials ?? []).find((m: any) => m.id === f.materialId);
+        const requiredQty = Number(f.quantity ?? 0) * Number(item.quantity ?? 0);
+        if (!acc[f.materialId]) {
+          acc[f.materialId] = {
+            materialId: f.materialId,
+            name: material?.name || 'Matière inconnue',
+            unit: material?.unit || '',
+            requiredQty: 0,
+            unitPrice: Number(material?.pricePerUnit ?? 0),
+            stock: Number(material?.stock ?? 0),
+          };
+        }
+        acc[f.materialId].requiredQty += requiredQty;
+      });
+    });
+    return Object.values(acc).map((r: any) => ({
+      ...r,
+      totalCost: Number(r.requiredQty ?? 0) * Number(r.unitPrice ?? 0),
+    }));
+  }, [selectedOrder, products, materials, isSelectedOrderSupplier]);
+
+  const totalMaterialCost = useMemo(
+    () => materialRequirements.reduce((sum: number, r: any) => sum + Number(r.totalCost ?? 0), 0),
+    [materialRequirements]
+  );
+  const hasMaterialShortage = useMemo(
+    () => materialRequirements.some((r: any) => Number(r.stock ?? 0) < Number(r.requiredQty ?? 0)),
+    [materialRequirements]
+  );
+
   return (
     <div className="bg-[#F8F9FC] min-h-screen font-sans">
       {/* HEADER TITLE */}
@@ -466,7 +571,11 @@ const saveMutation = useMutation({
                       const paymentConfig = PAYMENT_LABELS[order.paymentStatus] || { label: order.paymentStatus, bgColor: 'bg-slate-100', textColor: 'text-slate-700' };
                       return (
                         <tr key={order.id} className="hover:bg-slate-50 transition-colors group">
-                          <td className="px-6 py-4"><span className="text-sm font-medium text-slate-900">#{order.id.slice(0,8).toUpperCase()}</span></td>
+                          <td className="px-6 py-4">
+                            <span className="text-sm font-medium text-slate-900">
+                              {bonNumberById[order.id] ?? order.id.slice(0,8).toUpperCase()}
+                            </span>
+                          </td>
                           <td className="px-6 py-4">
                             <Link to={`/clients/${order.clientId}/history`} className="text-sm text-indigo-600 hover:text-indigo-800 hover:underline font-medium flex items-center gap-1.5">
                               <User size={14} />
@@ -612,7 +721,7 @@ const saveMutation = useMutation({
               </div>
               <h2 className="text-xl font-bold text-slate-900">Supprimer la commande</h2>
             </div>
-            <p className="text-slate-600 mb-6">Êtes-vous sûr de vouloir supprimer la commande <strong>#{orderToDelete.id.slice(0,8).toUpperCase()}</strong> ? Cette action est irréversible.</p>
+            <p className="text-slate-600 mb-6">Êtes-vous sûr de vouloir supprimer la commande <strong>{bonNumberById[orderToDelete.id] ?? orderToDelete.id.slice(0,8).toUpperCase()}</strong> ? Cette action est irréversible.</p>
             <div className="flex justify-end gap-3">
               <button onClick={() => { setIsDeleteModalOpen(false); setOrderToDelete(null); }} className="px-4 py-2 text-slate-700 bg-white border border-slate-200 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-all">Annuler</button>
               <button onClick={() => deleteMutation.mutate(orderToDelete.id)} disabled={deleteMutation.isLoading} className="px-4 py-2 bg-rose-600 text-white rounded-lg text-sm font-semibold hover:bg-rose-700 transition-all disabled:opacity-50">{deleteMutation.isLoading ? 'Suppression...' : 'Supprimer'}</button>
@@ -631,7 +740,7 @@ const saveMutation = useMutation({
                   <FileText size={20} className="text-indigo-600" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-slate-900">Détails Commande #{selectedOrder.id.slice(0,8).toUpperCase()}</h2>
+                  <h2 className="text-xl font-bold text-slate-900">Détails Commande {bonNumberById[selectedOrder.id] ?? selectedOrder.id.slice(0,8).toUpperCase()}</h2>
                   <p className="text-xs text-slate-500">Créée le {new Date(selectedOrder.createdAt || '').toLocaleDateString('fr-FR')}</p>
                 </div>
               </div>
@@ -699,6 +808,59 @@ const saveMutation = useMutation({
                 </table>
               </div>
 
+              {/* Consommation matières premières */}
+              {!isSelectedOrderSupplier && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold text-slate-500 uppercase">Matières premières nécessaires</h4>
+                    {hasMaterialShortage && (
+                      <span className="text-xs font-semibold text-rose-600 bg-rose-50 border border-rose-200 px-2 py-1 rounded-lg">
+                        Stock insuffisant
+                      </span>
+                    )}
+                  </div>
+                  <div className="border border-slate-100 rounded-xl overflow-hidden">
+                    {materialRequirements.length > 0 ? (
+                      <table className="w-full text-sm">
+                        <thead className="bg-slate-50 border-b border-slate-100">
+                          <tr>
+                            <th className="px-4 py-3 text-left font-semibold text-slate-600">Matière</th>
+                            <th className="px-4 py-3 text-center font-semibold text-slate-600">Qté requise</th>
+                            <th className="px-4 py-3 text-center font-semibold text-slate-600">Stock</th>
+                            <th className="px-4 py-3 text-right font-semibold text-slate-600">PU</th>
+                            <th className="px-4 py-3 text-right font-semibold text-slate-600">Coût</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50">
+                          {materialRequirements.map((m: any) => {
+                            const isLow = Number(m.stock ?? 0) < Number(m.requiredQty ?? 0);
+                            return (
+                              <tr key={m.materialId}>
+                                <td className="px-4 py-3 font-medium text-slate-800">{m.name}</td>
+                                <td className="px-4 py-3 text-center text-slate-600">{Number(m.requiredQty ?? 0).toLocaleString()} {m.unit}</td>
+                                <td className={`px-4 py-3 text-center font-semibold ${isLow ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                  {Number(m.stock ?? 0).toLocaleString()} {m.unit}
+                                </td>
+                                <td className="px-4 py-3 text-right text-slate-600">{Number(m.unitPrice ?? 0).toLocaleString()} DA</td>
+                                <td className="px-4 py-3 text-right font-bold text-slate-900">{Number(m.totalCost ?? 0).toLocaleString()} DA</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                        <tfoot className="bg-slate-50/50 font-bold">
+                          <tr>
+                            <td colSpan={4} className="px-4 py-3 text-right text-slate-600">Coût matières</td>
+                            <td className="px-4 py-3 text-right text-indigo-600 text-lg">{totalMaterialCost.toLocaleString()} DA</td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    ) : (
+                      <div className="px-4 py-6 text-center text-sm text-slate-400">Aucune formule matière associée aux produits.</div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Paiement & Notes */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
@@ -754,7 +916,7 @@ const saveMutation = useMutation({
                   </div>
                   <div className="text-right font-sans">
                     <h2 className="text-xl font-bold text-slate-900 uppercase">Bon de Commande</h2>
-                    <p className="text-lg font-bold text-indigo-600">N° {selectedOrderForPrint.id.slice(0,8).toUpperCase()}</p>
+                    <p className="text-lg font-bold text-indigo-600">N° {bonNumberById[selectedOrderForPrint.id] ?? selectedOrderForPrint.id.slice(0,8).toUpperCase()}</p>
                     <p className="text-sm text-slate-500">Date: {new Date(selectedOrderForPrint.orderDate).toLocaleDateString('fr-FR')}</p>
                   </div>
                 </div>

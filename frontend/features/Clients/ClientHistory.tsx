@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../api/supabase';
 import { Card, Badge, Button, Input } from '../../components/UI';
-import { TransactionType, PaymentStatus, Order as OrderType, Transaction as TransactionTypeDef } from '../../types';
+import { TransactionType, PaymentStatus, Order as OrderType, Transaction as TransactionTypeDef, OrderStatus, ProductConsumption } from '../../types';
 import GenerateClientPdf from '../../components/GenerateClientPdf';
 
 import { 
@@ -11,7 +11,7 @@ import {
   DollarSign, Package, CreditCard, TrendingUp, AlertCircle, 
   CheckCircle2, Info, Filter, MessageSquare, User, 
   ChevronRight, ArrowUpCircle, ArrowDownCircle, History,
-  Plus, Trash2, Send, Printer, Truck
+  Plus, Trash2, Send, Printer, Truck, FileText, X
 } from 'lucide-react';
 
 interface ClientNote {
@@ -20,11 +20,22 @@ interface ClientNote {
   date: string;
 }
 
+const STATUS_LABELS: Record<string, { label: string, bgColor: string, textColor: string, icon: any }> = {
+  [OrderStatus.EN_ATTENTE]: { label: 'En attente', bgColor: 'bg-slate-100', textColor: 'text-slate-700', icon: <Clock size={12}/> },
+  [OrderStatus.EN_PREPARATION]: { label: 'Préparation', bgColor: 'bg-amber-100', textColor: 'text-amber-700', icon: <Package size={12}/> },
+  [OrderStatus.EN_STOCK]: { label: 'En stock', bgColor: 'bg-indigo-100', textColor: 'text-indigo-700', icon: <ShoppingBag size={12}/> },
+  [OrderStatus.LIVREE]: { label: 'Livrée', bgColor: 'bg-emerald-100', textColor: 'text-emerald-700', icon: <CheckCircle2 size={12}/> },
+  [OrderStatus.ANNULEE]: { label: 'Annulée', bgColor: 'bg-rose-100', textColor: 'text-rose-700', icon: <AlertCircle size={12}/> },
+};
+
 export const ClientHistory: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [filterType, setFilterType] = useState<'all' | 'orders' | 'transactions'>('all');
   const [dateFrom, setDateFrom] = useState<string>('');
   const [dateTo, setDateTo] = useState<string>('');
+
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<OrderType | null>(null);
   
   const [notes, setNotes] = useState<ClientNote[]>([]);
   const [newNoteText, setNewNoteText] = useState('');
@@ -72,10 +83,9 @@ export const ClientHistory: React.FC = () => {
   };
 
   const fetchOrders = async () => {
-    // si tu as une relation order_items, tu peux remplacer select('*') par select('*, order_items(*)')
     const { data, error } = await supabase
       .from('orders')
-      .select('*')
+      .select('*, order_items(*)')
       .order('created_at', { ascending: false });
     if (error) throw error;
     return data || [];
@@ -91,15 +101,33 @@ export const ClientHistory: React.FC = () => {
   };
 
   const fetchProducts = async () => {
-    const { data, error } = await supabase.from('products').select('*');
+    const { data: productsData, error } = await supabase.from('products').select('*');
     if (error) throw error;
-    return data || [];
+    const { data: pcData, error: pcErr } = await supabase.from('product_consumption').select('*');
+    if (pcErr) throw pcErr;
+    const consumptionsByProduct: Record<string, ProductConsumption[]> = {};
+    (pcData ?? []).forEach((c: any) => {
+      if (!consumptionsByProduct[c.product_id]) consumptionsByProduct[c.product_id] = [];
+      consumptionsByProduct[c.product_id].push({
+        materialId: c.material_id,
+        quantity: Number(c.quantity ?? 0),
+      });
+    });
+    return (productsData ?? []).map((p: any) => ({
+      ...p,
+      pricePerUnit: p.price_per_unit ?? p.pricePerUnit,
+      consumptionFormula: consumptionsByProduct[p.id] || [],
+    }));
   };
 
   const fetchRawMaterials = async () => {
     const { data, error } = await supabase.from('materials').select('*');
     if (error) throw error;
-    return data || [];
+    return (data || []).map((m: any) => ({
+      ...m,
+      pricePerUnit: Number(m.price_per_unit ?? m.pricePerUnit ?? 0),
+      stock: Number(m.stock ?? 0),
+    }));
   };
 
   const { data: clients = [] } = useQuery({ queryKey: ['clients'], queryFn: fetchClients });
@@ -116,7 +144,17 @@ export const ClientHistory: React.FC = () => {
       totalPrice: r.total_price ?? r.totalAmount ?? r.total_amount ?? r.totalPrice ?? 0,
       paidAmount: r.paid_amount ?? r.paidAmount ?? r.paid_amount ?? 0,
       orderDate: r.order_date ?? r.created_at ?? r.orderDate ?? null,
-      items: r.items ?? r.order_items ?? r.items_list ?? [],
+      deliveryDate: r.delivery_date ?? r.deliveryDate ?? null,
+      notes: r.notes ?? r.note ?? null,
+      createdAt: r.created_at ?? r.createdAt ?? null,
+      items: (r.items ?? r.order_items ?? r.items_list ?? []).map((it: any) => ({
+        id: it.id ?? undefined,
+        productId: it.product_id ?? it.productId ?? it.product ?? null,
+        quantity: Number(it.quantity ?? 0),
+        unit: it.unit ?? 'unité',
+        unitPrice: Number(it.unit_price ?? it.unitPrice ?? 0),
+        totalItemPrice: Number(it.total_item_price ?? it.totalItemPrice ?? (Number(it.quantity ?? 0) * Number(it.unit_price ?? it.unitPrice ?? 0))),
+      })),
       status: r.status ?? r.state ?? null,
       // tu peux mapper d'autres champs si besoin
     })) as OrderType[];
@@ -211,6 +249,53 @@ export const ClientHistory: React.FC = () => {
     });
   }, [timeline, filterType, dateFrom, dateTo]);
 
+  const materialRequirements = useMemo(() => {
+    if (!selectedOrder || isSupplier) return [];
+    const acc: Record<string, any> = {};
+    (selectedOrder.items ?? []).forEach((item: any) => {
+      const product: any = (products ?? []).find((p: any) => p.id === item.productId);
+      const formula = product?.consumptionFormula ?? [];
+      formula.forEach((f: any) => {
+        const material: any = (rawMaterials ?? []).find((m: any) => m.id === f.materialId);
+        const requiredQty = Number(f.quantity ?? 0) * Number(item.quantity ?? 0);
+        if (!acc[f.materialId]) {
+          acc[f.materialId] = {
+            materialId: f.materialId,
+            name: material?.name || 'Matière inconnue',
+            unit: material?.unit || '',
+            requiredQty: 0,
+            unitPrice: Number(material?.pricePerUnit ?? 0),
+            stock: Number(material?.stock ?? 0),
+          };
+        }
+        acc[f.materialId].requiredQty += requiredQty;
+      });
+    });
+    return Object.values(acc).map((r: any) => ({
+      ...r,
+      totalCost: Number(r.requiredQty ?? 0) * Number(r.unitPrice ?? 0),
+    }));
+  }, [selectedOrder, products, rawMaterials, isSupplier]);
+
+  const totalMaterialCost = useMemo(
+    () => materialRequirements.reduce((sum: number, r: any) => sum + Number(r.totalCost ?? 0), 0),
+    [materialRequirements]
+  );
+  const hasMaterialShortage = useMemo(
+    () => materialRequirements.some((r: any) => Number(r.stock ?? 0) < Number(r.requiredQty ?? 0)),
+    [materialRequirements]
+  );
+
+  const openDetailsModal = (order: OrderType) => {
+    setSelectedOrder(order);
+    setIsDetailsModalOpen(true);
+  };
+
+  const closeDetailsModal = () => {
+    setIsDetailsModalOpen(false);
+    setSelectedOrder(null);
+  };
+
   if (!client) return (
     <div className="p-20 text-center">
       <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -288,8 +373,8 @@ export const ClientHistory: React.FC = () => {
               <p className="text-sm font-semibold text-emerald-600">+{stats.totalAdvancePayments.toLocaleString()} DA</p>
             </div>
           </div>
-          <p className="text-xs text-gray-500 mb-1">Total Reçu</p>
-          <p className="text-2xl font-semibold text-emerald-600">{stats.totalAdvancePayments.toLocaleString()} DA</p>
+          <p className="text-xs text-gray-500 mb-1">Total Encaissement</p>
+          <p className="text-2xl font-semibold text-emerald-600">{stats.totalIncome.toLocaleString()} DA</p>
         </div>
 
         <div className={`rounded-lg p-5 ${stats.balance < 0 ? 'bg-gradient-to-br from-rose-400 to-rose-400' : 'bg-gradient-to-br from-indigo-500 to-indigo-600'}`}>
@@ -436,12 +521,13 @@ export const ClientHistory: React.FC = () => {
                         </p>
                       )}
                         {isOrder && (
-                          <Link to={`/orders/${item.id}`}>
-                            <button className="flex items-center gap-1 text-xs text-indigo-600 hover:underline mt-1 print:hidden">
-                              Détails <ChevronRight size={12}/>
-                            </button>
-                          </Link>
-                        )}  
+                          <button
+                            onClick={() => openDetailsModal(item as OrderType)}
+                            className="flex items-center gap-1 text-xs text-indigo-600 hover:underline mt-1 print:hidden"
+                          >
+                            Détails <ChevronRight size={12}/>
+                          </button>
+                        )}
                     </div>
                   </div>
                 </div>
@@ -543,6 +629,162 @@ export const ClientHistory: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* DETAILS MODAL */}
+      {isDetailsModalOpen && selectedOrder && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center">
+                  <FileText size={20} className="text-indigo-600" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900">Détails Commande #{String(selectedOrder.id).slice(0,8).toUpperCase()}</h2>
+                  <p className="text-xs text-slate-500">Créée le {new Date(selectedOrder.createdAt || selectedOrder.orderDate || '').toLocaleDateString('fr-FR')}</p>
+                </div>
+              </div>
+              <button onClick={closeDetailsModal} className="p-2 hover:bg-slate-100 rounded-lg transition-colors"><X size={20} className="text-slate-600" /></button>
+            </div>
+
+            <div className="p-6 space-y-8">
+              {/* Infos Client & Statut */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Client</span>
+                  <p className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                    <User size={14} className="text-indigo-500" />
+                    {client?.name || 'Inconnu'}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Date de livraison</span>
+                  <p className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                    <Calendar size={14} className="text-amber-500" />
+                    {selectedOrder.deliveryDate ? new Date(selectedOrder.deliveryDate).toLocaleDateString('fr-FR') : 'Non définie'}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Statut Actuel</span>
+                  <div>
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold ${STATUS_LABELS[selectedOrder.status as any]?.bgColor} ${STATUS_LABELS[selectedOrder.status as any]?.textColor}`}>
+                      {STATUS_LABELS[selectedOrder.status as any]?.icon}
+                      {STATUS_LABELS[selectedOrder.status as any]?.label || selectedOrder.status}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Table des Articles */}
+              <div className="border border-slate-100 rounded-xl overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50 border-b border-slate-100">
+                    <tr>
+                      <th className="px-4 py-3 text-left font-semibold text-slate-600">Article</th>
+                      <th className="px-4 py-3 text-center font-semibold text-slate-600">Quantité</th>
+                      <th className="px-4 py-3 text-right font-semibold text-slate-600">Prix Unitaire</th>
+                      <th className="px-4 py-3 text-right font-semibold text-slate-600">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {selectedOrder.items?.map((item: any, idx: number) => {
+                      const product = (products ?? []).find((p: any) => p.id === item.productId) || (rawMaterials ?? []).find((m: any) => m.id === item.productId);
+                      return (
+                        <tr key={idx}>
+                          <td className="px-4 py-3 font-medium text-slate-800">{product?.name || 'Produit inconnu'}</td>
+                          <td className="px-4 py-3 text-center text-slate-600">{item.quantity} {item.unit}</td>
+                          <td className="px-4 py-3 text-right text-slate-600">{Number(item.unitPrice ?? 0).toLocaleString()} DA</td>
+                          <td className="px-4 py-3 text-right font-bold text-slate-900">{Number(item.totalItemPrice ?? 0).toLocaleString()} DA</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot className="bg-slate-50/50 font-bold">
+                    <tr>
+                      <td colSpan={3} className="px-4 py-3 text-right text-slate-600">Total Commande</td>
+                      <td className="px-4 py-3 text-right text-indigo-600 text-lg">{Number(selectedOrder.totalPrice ?? 0).toLocaleString()} DA</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+
+              {/* Consommation matières premières */}
+              {!isSupplier && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold text-slate-500 uppercase">Matières premières nécessaires</h4>
+                    {hasMaterialShortage && (
+                      <span className="text-xs font-semibold text-rose-600 bg-rose-50 border border-rose-200 px-2 py-1 rounded-lg">
+                        Stock insuffisant
+                      </span>
+                    )}
+                  </div>
+                  <div className="border border-slate-100 rounded-xl overflow-hidden">
+                    {materialRequirements.length > 0 ? (
+                      <table className="w-full text-sm">
+                        <thead className="bg-slate-50 border-b border-slate-100">
+                          <tr>
+                            <th className="px-4 py-3 text-left font-semibold text-slate-600">Matière</th>
+                            <th className="px-4 py-3 text-center font-semibold text-slate-600">Qté requise</th>
+                            <th className="px-4 py-3 text-center font-semibold text-slate-600">Stock</th>
+                            <th className="px-4 py-3 text-right font-semibold text-slate-600">PU</th>
+                            <th className="px-4 py-3 text-right font-semibold text-slate-600">Coût</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50">
+                          {materialRequirements.map((m: any) => {
+                            const isLow = Number(m.stock ?? 0) < Number(m.requiredQty ?? 0);
+                            return (
+                              <tr key={m.materialId}>
+                                <td className="px-4 py-3 font-medium text-slate-800">{m.name}</td>
+                                <td className="px-4 py-3 text-center text-slate-600">{Number(m.requiredQty ?? 0).toLocaleString()} {m.unit}</td>
+                                <td className={`px-4 py-3 text-center font-semibold ${isLow ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                  {Number(m.stock ?? 0).toLocaleString()} {m.unit}
+                                </td>
+                                <td className="px-4 py-3 text-right text-slate-600">{Number(m.unitPrice ?? 0).toLocaleString()} DA</td>
+                                <td className="px-4 py-3 text-right font-bold text-slate-900">{Number(m.totalCost ?? 0).toLocaleString()} DA</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                        <tfoot className="bg-slate-50/50 font-bold">
+                          <tr>
+                            <td colSpan={4} className="px-4 py-3 text-right text-slate-600">Coût matières</td>
+                            <td className="px-4 py-3 text-right text-indigo-600 text-lg">{totalMaterialCost.toLocaleString()} DA</td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    ) : (
+                      <div className="px-4 py-6 text-center text-sm text-slate-400">Aucune formule matière associée aux produits.</div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Paiement & Notes */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                  <h4 className="text-xs font-bold text-slate-500 uppercase mb-3">Résumé Financier</h4>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-600">Déjà versé:</span>
+                      <span className="font-bold text-emerald-600">{Number(selectedOrder.paidAmount ?? 0).toLocaleString()} DA</span>
+                    </div>
+                    <div className="flex justify-between text-sm border-t border-slate-200 pt-2">
+                      <span className="text-slate-600">Reste à payer:</span>
+                      <span className="font-bold text-rose-600">{(Number(selectedOrder.totalPrice ?? 0) - Number(selectedOrder.paidAmount ?? 0)).toLocaleString()} DA</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-amber-50/50 p-4 rounded-xl border border-amber-100">
+                  <h4 className="text-xs font-bold text-amber-600 uppercase mb-2">Notes / Instructions</h4>
+                  <p className="text-sm text-slate-700 italic">{selectedOrder.notes || "Aucune instruction particulière."}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
