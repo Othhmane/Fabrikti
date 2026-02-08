@@ -543,7 +543,73 @@ const saveMutation = useMutation({
             </div>
           ) : (
             <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-              <div className="overflow-x-auto">
+              {/* Mobile cards */}
+              <div className="md:hidden divide-y divide-slate-100">
+                {filteredOrders.length === 0 ? (
+                  <div className="px-6 py-12 text-center">
+                    <ShoppingCart size={32} className="text-slate-300 mx-auto mb-3" />
+                    <p className="text-slate-500 font-semibold">Aucune commande trouvée</p>
+                    <p className="text-slate-400 text-sm mt-1">Essayez un autre terme de recherche</p>
+                  </div>
+                ) : filteredOrders.map(order => {
+                  const client = (clients ?? []).find((c: any) => c.id === order.clientId);
+                  const statusConfig = STATUS_LABELS[order.status] || { label: order.status, bgColor: 'bg-slate-100', textColor: 'text-slate-700', icon: null };
+                  const paymentConfig = PAYMENT_LABELS[order.paymentStatus] || { label: order.paymentStatus, bgColor: 'bg-slate-100', textColor: 'text-slate-700' };
+                  return (
+                    <div key={`order-card-${order.id}`} className="p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-xs uppercase tracking-widest text-slate-400 font-bold">Bon de commande</p>
+                          <p className="text-base font-semibold text-slate-900 break-all">
+                            {bonNumberById[order.id] ?? order.id.slice(0,8).toUpperCase()}
+                          </p>
+                          <div className="mt-1 flex items-center gap-2 text-xs text-slate-500">
+                            <Calendar size={14} className="text-slate-400" />
+                            {new Date(order.orderDate).toLocaleDateString('fr-FR')}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-semibold text-slate-900 break-all">
+                            {(order.totalPrice ?? 0).toLocaleString()} DA
+                          </p>
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 mt-2 rounded-lg text-xs font-medium ${statusConfig.bgColor} ${statusConfig.textColor}`}>
+                            {statusConfig.icon}
+                            {statusConfig.label}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 flex items-center justify-between gap-3">
+                        <Link to={`/clients/${order.clientId}/history`} className="text-sm text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1.5">
+                          <User size={14} />
+                          <span className="truncate">{client?.name || 'Inconnu'}</span>
+                        </Link>
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium ${paymentConfig.bgColor} ${paymentConfig.textColor}`}>
+                          {paymentConfig.label}
+                        </span>
+                      </div>
+
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <button onClick={() => handleOpenPrint(order)} className="px-3 py-2 min-h-[44px] text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200 transition-all font-semibold">
+                          <Printer size={16} />
+                        </button>
+                        <button onClick={() => openDetailsModal(order)} className="px-3 py-2 min-h-[44px] text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 transition-all font-semibold">
+                          <Info size={16} />
+                        </button>
+                        <button onClick={() => handleOpenEdit(order)} className="px-3 py-2 min-h-[44px] text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-lg border border-amber-200 transition-all font-semibold">
+                          <Edit3 size={16} />
+                        </button>
+                        <button onClick={() => { setOrderToDelete(order); setIsDeleteModalOpen(true); }} className="px-3 py-2 min-h-[44px] text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg border border-rose-200 transition-all font-semibold">
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Desktop table */}
+              <div className="hidden md:block overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-slate-50 border-b border-slate-200">
                     <tr>
@@ -573,7 +639,7 @@ const saveMutation = useMutation({
                         <tr key={order.id} className="hover:bg-slate-50 transition-colors group">
                           <td className="px-6 py-4">
                             <span className="text-sm font-medium text-slate-900">
-                              {bonNumberById[order.id] ?? order.id.slice(0,8).toUpperCase()}
+                              <span className="break-all">{bonNumberById[order.id] ?? order.id.slice(0,8).toUpperCase()}</span>
                             </span>
                           </td>
                           <td className="px-6 py-4">
@@ -591,7 +657,7 @@ const saveMutation = useMutation({
                           <td className="px-6 py-4">
                             <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium ${paymentConfig.bgColor} ${paymentConfig.textColor} whitespace-nowrap`}>{paymentConfig.label}</span>
                           </td>
-                          <td className="px-6 py-4"><span className="text-sm font-semibold text-slate-900">{(order.totalPrice ?? 0).toLocaleString()} DA</span></td>
+                          <td className="px-6 py-4"><span className="text-sm font-semibold text-slate-900 break-all">{(order.totalPrice ?? 0).toLocaleString()} DA</span></td>
                           <td className="px-6 py-4 text-right">
                             <div className="flex justify-end gap-2">
                               <button onClick={() => handleOpenPrint(order)} className="p-2 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200 transition-all font-semibold" title="Imprimer BC"><Printer size={16} /></button>
@@ -777,35 +843,71 @@ const saveMutation = useMutation({
 
               {/* Table des Articles */}
               <div className="border border-slate-100 rounded-xl overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead className="bg-slate-50 border-b border-slate-100">
-                    <tr>
-                      <th className="px-4 py-3 text-left font-semibold text-slate-600">Article</th>
-                      <th className="px-4 py-3 text-center font-semibold text-slate-600">Quantité</th>
-                      <th className="px-4 py-3 text-right font-semibold text-slate-600">Prix Unitaire</th>
-                      <th className="px-4 py-3 text-right font-semibold text-slate-600">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {selectedOrder.items?.map((item, idx) => {
-                      const product = (products ?? []).find((p: any) => p.id === item.productId) || (materials ?? []).find((m: any) => m.id === item.productId);
-                      return (
-                        <tr key={idx}>
-                          <td className="px-4 py-3 font-medium text-slate-800">{product?.name || 'Produit inconnu'}</td>
-                          <td className="px-4 py-3 text-center text-slate-600">{item.quantity} {item.unit}</td>
-                          <td className="px-4 py-3 text-right text-slate-600">{(item.unitPrice ?? 0).toLocaleString()} DA</td>
-                          <td className="px-4 py-3 text-right font-bold text-slate-900">{(item.totalItemPrice ?? 0).toLocaleString()} DA</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                  <tfoot className="bg-slate-50/50 font-bold">
-                    <tr>
-                      <td colSpan={3} className="px-4 py-3 text-right text-slate-600">Total Commande</td>
-                      <td className="px-4 py-3 text-right text-indigo-600 text-lg">{(selectedOrder.totalPrice ?? 0).toLocaleString()} DA</td>
-                    </tr>
-                  </tfoot>
-                </table>
+                {/* Mobile cards */}
+                <div className="md:hidden divide-y divide-slate-50">
+                  {selectedOrder.items?.map((item, idx) => {
+                    const product = (products ?? []).find((p: any) => p.id === item.productId) || (materials ?? []).find((m: any) => m.id === item.productId);
+                    return (
+                      <div key={idx} className="p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-xs uppercase tracking-widest text-slate-400 font-bold">Article</p>
+                            <p className="text-sm font-semibold text-slate-900 break-words">{product?.name || 'Produit inconnu'}</p>
+                            <div className="mt-2 flex items-center gap-2 text-xs text-slate-500">
+                              <Package size={14} className="text-slate-400" />
+                              {item.quantity} {item.unit}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs text-slate-500">PU</p>
+                            <p className="text-sm font-semibold text-slate-700 break-all">{(item.unitPrice ?? 0).toLocaleString()} DA</p>
+                            <p className="text-xs text-slate-500 mt-2">Total</p>
+                            <p className="text-sm font-bold text-slate-900 break-all">{(item.totalItemPrice ?? 0).toLocaleString()} DA</p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div className="p-4 bg-slate-50/50">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-slate-600 uppercase">Total Commande</span>
+                      <span className="text-base font-bold text-indigo-600 break-all">{(selectedOrder.totalPrice ?? 0).toLocaleString()} DA</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Desktop table */}
+                <div className="hidden md:block">
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-50 border-b border-slate-100">
+                      <tr>
+                        <th className="px-4 py-3 text-left font-semibold text-slate-600">Article</th>
+                        <th className="px-4 py-3 text-center font-semibold text-slate-600">Quantité</th>
+                        <th className="px-4 py-3 text-right font-semibold text-slate-600">Prix Unitaire</th>
+                        <th className="px-4 py-3 text-right font-semibold text-slate-600">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {selectedOrder.items?.map((item, idx) => {
+                        const product = (products ?? []).find((p: any) => p.id === item.productId) || (materials ?? []).find((m: any) => m.id === item.productId);
+                        return (
+                          <tr key={idx}>
+                            <td className="px-4 py-3 font-medium text-slate-800">{product?.name || 'Produit inconnu'}</td>
+                            <td className="px-4 py-3 text-center text-slate-600">{item.quantity} {item.unit}</td>
+                            <td className="px-4 py-3 text-right text-slate-600 break-all">{(item.unitPrice ?? 0).toLocaleString()} DA</td>
+                            <td className="px-4 py-3 text-right font-bold text-slate-900 break-all">{(item.totalItemPrice ?? 0).toLocaleString()} DA</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot className="bg-slate-50/50 font-bold">
+                      <tr>
+                        <td colSpan={3} className="px-4 py-3 text-right text-slate-600">Total Commande</td>
+                        <td className="px-4 py-3 text-right text-indigo-600 text-lg break-all">{(selectedOrder.totalPrice ?? 0).toLocaleString()} DA</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
               </div>
 
               {/* Consommation matières premières */}
@@ -821,6 +923,45 @@ const saveMutation = useMutation({
                   </div>
                   <div className="border border-slate-100 rounded-xl overflow-hidden">
                     {materialRequirements.length > 0 ? (
+                      <>
+                      {/* Mobile cards */}
+                      <div className="md:hidden divide-y divide-slate-50">
+                        {materialRequirements.map((m: any) => {
+                          const isLow = Number(m.stock ?? 0) < Number(m.requiredQty ?? 0);
+                          return (
+                            <div key={m.materialId} className="p-4">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <p className="text-xs uppercase tracking-widest text-slate-400 font-bold">Matière</p>
+                                  <p className="text-sm font-semibold text-slate-900 break-words">{m.name}</p>
+                                  <div className="mt-2 flex items-center gap-2 text-xs text-slate-500">
+                                    <Package size={14} className="text-slate-400" />
+                                    {Number(m.requiredQty ?? 0).toLocaleString()} {m.unit} requis
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <p className={`text-sm font-semibold ${isLow ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                    {Number(m.stock ?? 0).toLocaleString()} {m.unit}
+                                  </p>
+                                  <p className="text-xs text-slate-500 mt-2">PU</p>
+                                  <p className="text-sm font-semibold text-slate-700 break-all">{Number(m.unitPrice ?? 0).toLocaleString()} DA</p>
+                                  <p className="text-xs text-slate-500 mt-2">Coût</p>
+                                  <p className="text-sm font-bold text-slate-900 break-all">{Number(m.totalCost ?? 0).toLocaleString()} DA</p>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                        <div className="p-4 bg-slate-50/50">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-semibold text-slate-600 uppercase">Coût matières</span>
+                            <span className="text-base font-bold text-indigo-600 break-all">{totalMaterialCost.toLocaleString()} DA</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Desktop table */}
+                      <div className="hidden md:block">
                       <table className="w-full text-sm">
                         <thead className="bg-slate-50 border-b border-slate-100">
                           <tr>
@@ -841,8 +982,8 @@ const saveMutation = useMutation({
                                 <td className={`px-4 py-3 text-center font-semibold ${isLow ? 'text-rose-600' : 'text-emerald-600'}`}>
                                   {Number(m.stock ?? 0).toLocaleString()} {m.unit}
                                 </td>
-                                <td className="px-4 py-3 text-right text-slate-600">{Number(m.unitPrice ?? 0).toLocaleString()} DA</td>
-                                <td className="px-4 py-3 text-right font-bold text-slate-900">{Number(m.totalCost ?? 0).toLocaleString()} DA</td>
+                                <td className="px-4 py-3 text-right text-slate-600 break-all">{Number(m.unitPrice ?? 0).toLocaleString()} DA</td>
+                                <td className="px-4 py-3 text-right font-bold text-slate-900 break-all">{Number(m.totalCost ?? 0).toLocaleString()} DA</td>
                               </tr>
                             );
                           })}
@@ -850,10 +991,12 @@ const saveMutation = useMutation({
                         <tfoot className="bg-slate-50/50 font-bold">
                           <tr>
                             <td colSpan={4} className="px-4 py-3 text-right text-slate-600">Coût matières</td>
-                            <td className="px-4 py-3 text-right text-indigo-600 text-lg">{totalMaterialCost.toLocaleString()} DA</td>
+                            <td className="px-4 py-3 text-right text-indigo-600 text-lg break-all">{totalMaterialCost.toLocaleString()} DA</td>
                           </tr>
                         </tfoot>
                       </table>
+                      </div>
+                      </>
                     ) : (
                       <div className="px-4 py-6 text-center text-sm text-slate-400">Aucune formule matière associée aux produits.</div>
                     )}

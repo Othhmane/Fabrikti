@@ -5,6 +5,7 @@ import { Menu, X, LogOut, ChevronRight, User as UserIcon, Bell } from 'lucide-re
 import { useUIStore } from '../store/useStore';
 import { useAuthStore } from '../store/authStore';
 import { NAVIGATION_ITEMS } from '../constants';
+import { FloatingCalculator } from './FloatingCalculator';
 
 const SidebarItem: React.FC<{ item: typeof NAVIGATION_ITEMS[0]; isActive: boolean; onClick?: () => void }> = ({ item, isActive, onClick }) => {
   const { themeColor } = useUIStore();
@@ -15,7 +16,7 @@ const SidebarItem: React.FC<{ item: typeof NAVIGATION_ITEMS[0]; isActive: boolea
     <Link
       to={item.path}
       onClick={onClick}
-      className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${isActive ? activeClass : inactiveClass}`}
+      className={`flex items-center gap-3 px-4 py-3.5 min-h-[44px] rounded-xl transition-all duration-200 group ${isActive ? activeClass : inactiveClass}`}
     >
       <span className={isActive ? 'text-white' : 'group-hover:text-white transition-colors'}>
         {item.icon}
@@ -37,6 +38,10 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     navigate('/login');
   };
 
+  const activeItem = NAVIGATION_ITEMS.find(item =>
+    item.path === '/' ? location.pathname === '/' : location.pathname.startsWith(item.path)
+  );
+
   return (
     <div className="min-h-screen flex bg-slate-50 flex-col lg:flex-row font-sans selection:bg-blue-100 selection:text-blue-900">
       {/* Mobile Backdrop */}
@@ -49,18 +54,18 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
       {/* Sidebar */}
       <aside 
-        className={`fixed inset-y-0 left-0 z-50 w-72 bg-slate-950 border-r border-slate-800 transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 w-64 sm:w-72 bg-slate-950 border-r border-slate-800 transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         <div className="flex flex-col h-full">
           {/* Logo & Brand */}
-          <div className="flex items-center justify-between px-6 py-10">
+          <div className="flex items-center justify-between px-5 sm:px-6 py-8 sm:py-10">
             <Link to="/" className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-2xl bg-${themeColor}-600 flex items-center justify-center font-black text-white shadow-lg shadow-${themeColor}-600/20`}>F</div>
-              <h1 className="text-2xl font-black text-white tracking-tighter uppercase">Fabrikti</h1>
+              <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-${themeColor}-600 flex items-center justify-center font-black text-white shadow-lg shadow-${themeColor}-600/20`}>F</div>
+              <h1 className="text-xl sm:text-2xl font-black text-white tracking-tighter uppercase">Fabrikti</h1>
             </Link>
-            <button onClick={toggleSidebar} className="lg:hidden text-slate-500 hover:text-white"><X size={20} /></button>
+            <button onClick={toggleSidebar} className="lg:hidden text-slate-500 hover:text-white p-2"><X size={20} /></button>
           </div>
 
           {/* Navigation */}
@@ -89,7 +94,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
              </div>
             <button 
               onClick={handleLogout}
-              className="flex items-center gap-3 px-4 py-3 w-full text-slate-500 hover:text-white transition-all hover:bg-red-500/10 hover:border-red-500/30 border border-transparent rounded-xl font-semibold text-sm"
+              className="flex items-center gap-3 px-4 py-3 min-h-[44px] w-full text-slate-500 hover:text-white transition-all hover:bg-red-500/10 hover:border-red-500/30 border border-transparent rounded-xl font-semibold text-sm"
             >
               <LogOut size={18} />
               <span>Déconnexion</span>
@@ -100,21 +105,28 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden h-screen relative">
-        <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-6 lg:px-10 shrink-0 sticky top-0 z-30">
-          <div className="flex items-center gap-4">
+        <header className="h-16 sm:h-20 bg-white/80 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-4 sm:px-6 lg:px-10 shrink-0 sticky top-0 z-30">
+          <div className="flex items-center gap-3 sm:gap-4">
             <button 
               onClick={toggleSidebar}
               className="p-2.5 rounded-xl lg:hidden text-slate-600 hover:bg-slate-100 transition-colors"
             >
               <Menu size={22} />
             </button>
+            <div className="flex items-center gap-3 lg:hidden">
+              <div className={`w-9 h-9 rounded-xl bg-${themeColor}-600 text-white font-black flex items-center justify-center`}>F</div>
+              <div>
+                <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Section</p>
+                <p className="text-base font-semibold text-slate-900 leading-tight">{activeItem?.name || 'Tableau de bord'}</p>
+              </div>
+            </div>
             <div className="hidden lg:block">
                <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-0.5">Console Admin</p>
                <h2 className="text-xl font-black text-slate-900 leading-tight">Bienvenue, {user?.name?.split(' ')[0] || 'Admin'}</h2>
             </div>
           </div>
           
-          <div className="flex items-center gap-4 lg:gap-6">
+          <div className="flex items-center gap-3 sm:gap-4 lg:gap-6">
             {/* Action Bar Header */}
             <div className="flex items-center bg-slate-100 rounded-full p-1 border border-slate-200">
                <button className="p-2 text-slate-400 hover:text-slate-900 transition-colors">
@@ -132,19 +144,21 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">En ligne</p>
                 </div>
               </div>
-              <div className={`w-12 h-12 rounded-2xl bg-${themeColor}-100 flex items-center justify-center font-black border-2 border-white shadow-xl shadow-slate-200 overflow-hidden`}>
-                <UserIcon size={24} className={`text-${themeColor}-600`} />
+              <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-${themeColor}-100 flex items-center justify-center font-black border-2 border-white shadow-xl shadow-slate-200 overflow-hidden`}>
+                <UserIcon size={22} className={`text-${themeColor}-600`} />
               </div>
             </div>
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-6 lg:p-10 bg-slate-50/50 scroll-smooth">
-          <div className="max-w-7xl mx-auto pb-20 lg:pb-0">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-10 bg-slate-50/50 scroll-smooth">
+          <div className="max-w-7xl mx-auto pb-16 sm:pb-20 lg:pb-0">
             {children}
           </div>
         </main>
       </div>
+
+      <FloatingCalculator />
     </div>
   );
 };

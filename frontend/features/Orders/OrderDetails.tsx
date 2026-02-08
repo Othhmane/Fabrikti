@@ -179,7 +179,45 @@ export const OrderDetails: React.FC = () => {
                  border: '1px solid #E5E7EB',
                  overflow: 'hidden'
                }}>
-                  <table className="w-full text-left">
+                  {/* Mobile cards */}
+                  <div className="md:hidden divide-y divide-slate-200">
+                    {order.items?.map((item, idx) => {
+                      const p = products?.find(prod => prod.id === item.productId);
+                      return (
+                        <div key={idx} className="p-4 bg-white">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="text-xs uppercase tracking-widest text-slate-400 font-bold">Article</p>
+                              <p className="text-sm font-semibold text-slate-900 break-words">{p?.name || 'Produit Inconnu'}</p>
+                              <div className="mt-2 flex items-center gap-2 text-xs text-slate-500">
+                                <ShoppingCart size={14} className="text-slate-400" />
+                                {item.quantity} {item.unit}
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-xs text-slate-500">PU</p>
+                              <p className="text-sm font-semibold text-slate-700 break-all">{item.unitPrice?.toLocaleString()} DA</p>
+                              <p className="text-xs text-slate-500 mt-2">Total</p>
+                              <p className="text-sm font-bold text-slate-900 break-all">{item.totalItemPrice?.toLocaleString()} DA</p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {(!order.items || order.items.length === 0) && (
+                      <div className="p-4 bg-white">
+                        <p className="text-sm font-semibold text-slate-900">Produit Unique (Legacy)</p>
+                        <p className="text-sm text-slate-600 mt-1">Quantité: 0</p>
+                        <p className="text-sm text-slate-600 mt-1">PU: --</p>
+                        <p className="text-sm font-bold text-slate-900 mt-2 break-all">
+                          {order.totalPrice.toLocaleString()} DA
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Desktop table */}
+                  <table className="hidden md:table w-full text-left">
                     <thead style={{ 
                       fontSize: '0.75rem', 
                       color: '#6B7280',
@@ -203,8 +241,8 @@ export const OrderDetails: React.FC = () => {
                           }}>
                             <td style={{ padding: '0.75rem 1rem' }}>{p?.name || 'Produit Inconnu'}</td>
                             <td style={{ padding: '0.75rem 1rem' }}>{item.quantity} {item.unit}</td>
-                            <td style={{ padding: '0.75rem 1rem' }}>{item.unitPrice?.toLocaleString()} DA</td>
-                            <td style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: '600' }}>
+                            <td style={{ padding: '0.75rem 1rem' }} className="break-all">{item.unitPrice?.toLocaleString()} DA</td>
+                            <td style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: '600' }} className="break-all">
                               {item.totalItemPrice?.toLocaleString()} DA
                             </td>
                           </tr>

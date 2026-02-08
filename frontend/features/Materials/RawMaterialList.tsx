@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   Search, Plus, Layers, Truck, Edit, Trash2, 
-  X, AlertTriangle, Info, Package, User, ArrowUpCircle, ArrowDownCircle
+  X, AlertTriangle, Info, Package, User, ArrowUpCircle, ArrowDownCircle, Calendar
 } from 'lucide-react';
 import { supabase } from '../../api/supabase'; // adapte le chemin si besoin
 import { Link } from 'react-router-dom';
@@ -546,79 +546,135 @@ export const RawMaterialList: React.FC = () => {
                 </div>
 
                 <div className="border border-slate-200 rounded-2xl overflow-hidden">
-                  <table className="w-full text-sm">
-                    <thead className="bg-slate-50 border-b border-slate-200">
-                      <tr>
-                        <th className="px-4 py-3 text-left font-semibold text-slate-600">Date</th>
-                        <th className="px-4 py-3 text-left font-semibold text-slate-600">Type</th>
-                        <th className="px-4 py-3 text-left font-semibold text-slate-600">Détail</th>
-                        <th className="px-4 py-3 text-right font-semibold text-slate-600">Quantité</th>
-                        <th className="px-4 py-3 text-right font-semibold text-slate-600">Montant</th>
-                        <th className="px-4 py-3 text-right font-semibold text-slate-600">Commande</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {materialHistory.length === 0 ? (
-                        <tr>
-                          <td colSpan={6} className="px-4 py-10 text-center text-slate-400">
-                            Aucun historique trouvé pour cette matière.
-                          </td>
-                        </tr>
-                      ) : (
-                        materialHistory.map((e: any) => {
-                          const isIn = e.direction === 'IN';
-                          const badge =
-                            e.kind === 'PURCHASE'
-                              ? { label: 'Achat', classes: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: <ArrowUpCircle size={14} /> }
-                              : e.kind === 'CONSUMPTION'
-                                ? { label: 'Consommation', classes: 'bg-rose-100 text-rose-700 border-rose-200', icon: <ArrowDownCircle size={14} /> }
-                                : { label: 'Transaction', classes: 'bg-slate-100 text-slate-700 border-slate-200', icon: <Truck size={14} /> };
+                  {/* Mobile cards */}
+                  <div className="md:hidden divide-y divide-slate-100">
+                    {materialHistory.length === 0 ? (
+                      <div className="px-4 py-10 text-center text-slate-400">
+                        Aucun historique trouvé pour cette matière.
+                      </div>
+                    ) : (
+                      materialHistory.map((e: any) => {
+                        const isIn = e.direction === 'IN';
+                        const badge =
+                          e.kind === 'PURCHASE'
+                            ? { label: 'Achat', classes: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: <ArrowUpCircle size={14} /> }
+                            : e.kind === 'CONSUMPTION'
+                              ? { label: 'Consommation', classes: 'bg-rose-100 text-rose-700 border-rose-200', icon: <ArrowDownCircle size={14} /> }
+                              : { label: 'Transaction', classes: 'bg-slate-100 text-slate-700 border-slate-200', icon: <Truck size={14} /> };
 
-                          return (
-                            <tr key={e.id} className="hover:bg-slate-50 transition-colors">
-                              <td className="px-4 py-3 text-slate-700">
-                                {e.date ? new Date(e.date).toLocaleDateString('fr-FR') : '—'}
-                              </td>
-                              <td className="px-4 py-3">
+                        return (
+                          <div key={e.id} className="p-4">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="text-xs uppercase tracking-widest text-slate-400 font-bold">Historique</p>
+                                <div className="mt-1 flex items-center gap-2 text-xs text-slate-500">
+                                  <Calendar size={14} className="text-slate-400" />
+                                  {e.date ? new Date(e.date).toLocaleDateString('fr-FR') : '—'}
+                                </div>
+                                <p className="text-sm font-semibold text-slate-900 mt-2 break-words">{e.label}</p>
+                              </div>
+                              <div className="text-right">
                                 <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg border ${badge.classes}`}>
                                   {badge.icon}
                                   {badge.label}
                                 </span>
-                              </td>
-                              <td className="px-4 py-3 text-slate-700">
-                                <div className="font-medium text-slate-900">{e.label}</div>
-                              </td>
-                              <td className="px-4 py-3 text-right">
-                                {e.quantity !== null && e.quantity !== undefined ? (
-                                  <span className={`font-semibold ${isIn ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                    {isIn ? '+' : '-'}{Number(e.quantity).toLocaleString()} {e.unit}
+                                <p className={`text-sm font-semibold mt-2 ${isIn ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                  {isIn ? '+' : '-'}{Number(e.quantity ?? 0).toLocaleString()} {e.unit}
+                                </p>
+                                {e.amount !== null && e.amount !== undefined && (
+                                  <p className="text-sm font-semibold text-slate-900 break-all mt-1">{Number(e.amount).toLocaleString()} DA</p>
+                                )}
+                              </div>
+                            </div>
+                            {e.orderId && (
+                              <div className="mt-3">
+                                <Link to={`/orders/${e.orderId}`} className="text-indigo-600 hover:underline text-xs font-semibold break-all">
+                                  CMD-{String(e.orderId).slice(0,8).toUpperCase()}
+                                </Link>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  {/* Desktop table */}
+                  <div className="hidden md:block">
+                    <table className="w-full text-sm">
+                      <thead className="bg-slate-50 border-b border-slate-200">
+                        <tr>
+                          <th className="px-4 py-3 text-left font-semibold text-slate-600">Date</th>
+                          <th className="px-4 py-3 text-left font-semibold text-slate-600">Type</th>
+                          <th className="px-4 py-3 text-left font-semibold text-slate-600">Détail</th>
+                          <th className="px-4 py-3 text-right font-semibold text-slate-600">Quantité</th>
+                          <th className="px-4 py-3 text-right font-semibold text-slate-600">Montant</th>
+                          <th className="px-4 py-3 text-right font-semibold text-slate-600">Commande</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {materialHistory.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="px-4 py-10 text-center text-slate-400">
+                              Aucun historique trouvé pour cette matière.
+                            </td>
+                          </tr>
+                        ) : (
+                          materialHistory.map((e: any) => {
+                            const isIn = e.direction === 'IN';
+                            const badge =
+                              e.kind === 'PURCHASE'
+                                ? { label: 'Achat', classes: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: <ArrowUpCircle size={14} /> }
+                                : e.kind === 'CONSUMPTION'
+                                  ? { label: 'Consommation', classes: 'bg-rose-100 text-rose-700 border-rose-200', icon: <ArrowDownCircle size={14} /> }
+                                  : { label: 'Transaction', classes: 'bg-slate-100 text-slate-700 border-slate-200', icon: <Truck size={14} /> };
+
+                            return (
+                              <tr key={e.id} className="hover:bg-slate-50 transition-colors">
+                                <td className="px-4 py-3 text-slate-700">
+                                  {e.date ? new Date(e.date).toLocaleDateString('fr-FR') : '—'}
+                                </td>
+                                <td className="px-4 py-3">
+                                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg border ${badge.classes}`}>
+                                    {badge.icon}
+                                    {badge.label}
                                   </span>
-                                ) : (
-                                  <span className="text-xs text-slate-400">-</span>
-                                )}
-                              </td>
-                              <td className="px-4 py-3 text-right">
-                                {e.amount !== null && e.amount !== undefined ? (
-                                  <span className="font-semibold text-slate-900">{Number(e.amount).toLocaleString()} DA</span>
-                                ) : (
-                                  <span className="text-xs text-slate-400">-</span>
-                                )}
-                              </td>
-                              <td className="px-4 py-3 text-right">
-                                {e.orderId ? (
-                                  <Link to={`/orders/${e.orderId}`} className="text-indigo-600 hover:underline text-xs font-semibold">
-                                    CMD-{String(e.orderId).slice(0,8).toUpperCase()}
-                                  </Link>
-                                ) : (
-                                  <span className="text-xs text-slate-400">-</span>
-                                )}
-                              </td>
-                            </tr>
-                          );
-                        })
-                      )}
-                    </tbody>
-                  </table>
+                                </td>
+                                <td className="px-4 py-3 text-slate-700">
+                                  <div className="font-medium text-slate-900 break-words">{e.label}</div>
+                                </td>
+                                <td className="px-4 py-3 text-right">
+                                  {e.quantity !== null && e.quantity !== undefined ? (
+                                    <span className={`font-semibold ${isIn ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                      {isIn ? '+' : '-'}{Number(e.quantity).toLocaleString()} {e.unit}
+                                    </span>
+                                  ) : (
+                                    <span className="text-xs text-slate-400">-</span>
+                                  )}
+                                </td>
+                                <td className="px-4 py-3 text-right">
+                                  {e.amount !== null && e.amount !== undefined ? (
+                                    <span className="font-semibold text-slate-900 break-all">{Number(e.amount).toLocaleString()} DA</span>
+                                  ) : (
+                                    <span className="text-xs text-slate-400">-</span>
+                                  )}
+                                </td>
+                                <td className="px-4 py-3 text-right">
+                                  {e.orderId ? (
+                                    <Link to={`/orders/${e.orderId}`} className="text-indigo-600 hover:underline text-xs font-semibold break-all">
+                                      CMD-{String(e.orderId).slice(0,8).toUpperCase()}
+                                    </Link>
+                                  ) : (
+                                    <span className="text-xs text-slate-400">-</span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
 
                 <div className="flex gap-3 pt-6">

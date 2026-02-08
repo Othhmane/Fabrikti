@@ -677,35 +677,71 @@ export const ClientHistory: React.FC = () => {
 
               {/* Table des Articles */}
               <div className="border border-slate-100 rounded-xl overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead className="bg-slate-50 border-b border-slate-100">
-                    <tr>
-                      <th className="px-4 py-3 text-left font-semibold text-slate-600">Article</th>
-                      <th className="px-4 py-3 text-center font-semibold text-slate-600">Quantité</th>
-                      <th className="px-4 py-3 text-right font-semibold text-slate-600">Prix Unitaire</th>
-                      <th className="px-4 py-3 text-right font-semibold text-slate-600">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {selectedOrder.items?.map((item: any, idx: number) => {
-                      const product = (products ?? []).find((p: any) => p.id === item.productId) || (rawMaterials ?? []).find((m: any) => m.id === item.productId);
-                      return (
-                        <tr key={idx}>
-                          <td className="px-4 py-3 font-medium text-slate-800">{product?.name || 'Produit inconnu'}</td>
-                          <td className="px-4 py-3 text-center text-slate-600">{item.quantity} {item.unit}</td>
-                          <td className="px-4 py-3 text-right text-slate-600">{Number(item.unitPrice ?? 0).toLocaleString()} DA</td>
-                          <td className="px-4 py-3 text-right font-bold text-slate-900">{Number(item.totalItemPrice ?? 0).toLocaleString()} DA</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                  <tfoot className="bg-slate-50/50 font-bold">
-                    <tr>
-                      <td colSpan={3} className="px-4 py-3 text-right text-slate-600">Total Commande</td>
-                      <td className="px-4 py-3 text-right text-indigo-600 text-lg">{Number(selectedOrder.totalPrice ?? 0).toLocaleString()} DA</td>
-                    </tr>
-                  </tfoot>
-                </table>
+                {/* Mobile cards */}
+                <div className="md:hidden divide-y divide-slate-50">
+                  {selectedOrder.items?.map((item: any, idx: number) => {
+                    const product = (products ?? []).find((p: any) => p.id === item.productId) || (rawMaterials ?? []).find((m: any) => m.id === item.productId);
+                    return (
+                      <div key={idx} className="p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-xs uppercase tracking-widest text-slate-400 font-bold">Article</p>
+                            <p className="text-sm font-semibold text-slate-900 break-words">{product?.name || 'Produit inconnu'}</p>
+                            <div className="mt-2 flex items-center gap-2 text-xs text-slate-500">
+                              <Package size={14} className="text-slate-400" />
+                              {item.quantity} {item.unit}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs text-slate-500">PU</p>
+                            <p className="text-sm font-semibold text-slate-700 break-all">{Number(item.unitPrice ?? 0).toLocaleString()} DA</p>
+                            <p className="text-xs text-slate-500 mt-2">Total</p>
+                            <p className="text-sm font-bold text-slate-900 break-all">{Number(item.totalItemPrice ?? 0).toLocaleString()} DA</p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div className="p-4 bg-slate-50/50">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-slate-600 uppercase">Total Commande</span>
+                      <span className="text-base font-bold text-indigo-600 break-all">{Number(selectedOrder.totalPrice ?? 0).toLocaleString()} DA</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Desktop table */}
+                <div className="hidden md:block">
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-50 border-b border-slate-100">
+                      <tr>
+                        <th className="px-4 py-3 text-left font-semibold text-slate-600">Article</th>
+                        <th className="px-4 py-3 text-center font-semibold text-slate-600">Quantité</th>
+                        <th className="px-4 py-3 text-right font-semibold text-slate-600">Prix Unitaire</th>
+                        <th className="px-4 py-3 text-right font-semibold text-slate-600">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {selectedOrder.items?.map((item: any, idx: number) => {
+                        const product = (products ?? []).find((p: any) => p.id === item.productId) || (rawMaterials ?? []).find((m: any) => m.id === item.productId);
+                        return (
+                          <tr key={idx}>
+                            <td className="px-4 py-3 font-medium text-slate-800">{product?.name || 'Produit inconnu'}</td>
+                            <td className="px-4 py-3 text-center text-slate-600">{item.quantity} {item.unit}</td>
+                            <td className="px-4 py-3 text-right text-slate-600 break-all">{Number(item.unitPrice ?? 0).toLocaleString()} DA</td>
+                            <td className="px-4 py-3 text-right font-bold text-slate-900 break-all">{Number(item.totalItemPrice ?? 0).toLocaleString()} DA</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot className="bg-slate-50/50 font-bold">
+                      <tr>
+                        <td colSpan={3} className="px-4 py-3 text-right text-slate-600">Total Commande</td>
+                        <td className="px-4 py-3 text-right text-indigo-600 text-lg break-all">{Number(selectedOrder.totalPrice ?? 0).toLocaleString()} DA</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
               </div>
 
               {/* Consommation matières premières */}
@@ -721,6 +757,45 @@ export const ClientHistory: React.FC = () => {
                   </div>
                   <div className="border border-slate-100 rounded-xl overflow-hidden">
                     {materialRequirements.length > 0 ? (
+                      <>
+                      {/* Mobile cards */}
+                      <div className="md:hidden divide-y divide-slate-50">
+                        {materialRequirements.map((m: any) => {
+                          const isLow = Number(m.stock ?? 0) < Number(m.requiredQty ?? 0);
+                          return (
+                            <div key={m.materialId} className="p-4">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <p className="text-xs uppercase tracking-widest text-slate-400 font-bold">Matière</p>
+                                  <p className="text-sm font-semibold text-slate-900 break-words">{m.name}</p>
+                                  <div className="mt-2 flex items-center gap-2 text-xs text-slate-500">
+                                    <Package size={14} className="text-slate-400" />
+                                    {Number(m.requiredQty ?? 0).toLocaleString()} {m.unit} requis
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <p className={`text-sm font-semibold ${isLow ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                    {Number(m.stock ?? 0).toLocaleString()} {m.unit}
+                                  </p>
+                                  <p className="text-xs text-slate-500 mt-2">PU</p>
+                                  <p className="text-sm font-semibold text-slate-700 break-all">{Number(m.unitPrice ?? 0).toLocaleString()} DA</p>
+                                  <p className="text-xs text-slate-500 mt-2">Coût</p>
+                                  <p className="text-sm font-bold text-slate-900 break-all">{Number(m.totalCost ?? 0).toLocaleString()} DA</p>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                        <div className="p-4 bg-slate-50/50">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-semibold text-slate-600 uppercase">Coût matières</span>
+                            <span className="text-base font-bold text-indigo-600 break-all">{totalMaterialCost.toLocaleString()} DA</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Desktop table */}
+                      <div className="hidden md:block">
                       <table className="w-full text-sm">
                         <thead className="bg-slate-50 border-b border-slate-100">
                           <tr>
@@ -741,8 +816,8 @@ export const ClientHistory: React.FC = () => {
                                 <td className={`px-4 py-3 text-center font-semibold ${isLow ? 'text-rose-600' : 'text-emerald-600'}`}>
                                   {Number(m.stock ?? 0).toLocaleString()} {m.unit}
                                 </td>
-                                <td className="px-4 py-3 text-right text-slate-600">{Number(m.unitPrice ?? 0).toLocaleString()} DA</td>
-                                <td className="px-4 py-3 text-right font-bold text-slate-900">{Number(m.totalCost ?? 0).toLocaleString()} DA</td>
+                                <td className="px-4 py-3 text-right text-slate-600 break-all">{Number(m.unitPrice ?? 0).toLocaleString()} DA</td>
+                                <td className="px-4 py-3 text-right font-bold text-slate-900 break-all">{Number(m.totalCost ?? 0).toLocaleString()} DA</td>
                               </tr>
                             );
                           })}
@@ -750,10 +825,12 @@ export const ClientHistory: React.FC = () => {
                         <tfoot className="bg-slate-50/50 font-bold">
                           <tr>
                             <td colSpan={4} className="px-4 py-3 text-right text-slate-600">Coût matières</td>
-                            <td className="px-4 py-3 text-right text-indigo-600 text-lg">{totalMaterialCost.toLocaleString()} DA</td>
+                            <td className="px-4 py-3 text-right text-indigo-600 text-lg break-all">{totalMaterialCost.toLocaleString()} DA</td>
                           </tr>
                         </tfoot>
                       </table>
+                      </div>
+                      </>
                     ) : (
                       <div className="px-4 py-6 text-center text-sm text-slate-400">Aucune formule matière associée aux produits.</div>
                     )}

@@ -641,25 +641,25 @@ export const TransactionList: React.FC = () => {
   // ----------------- RENDER -----------------
   return (
     <div className="bg-[#F8F9FC] min-h-screen font-sans">
-      <div className="bg-white border-b border-slate-200 px-6 md:px-10 py-6">
+      <div className="bg-white border-b border-slate-200 px-4 sm:px-6 md:px-10 py-5 sm:py-6">
         <div className="max-w-7xl mx-auto">
-          <h1 className="text-3xl font-bold text-slate-900">Trésorerie</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Trésorerie</h1>
           <p className="text-sm text-slate-500 mt-2">Gestion des flux financiers et suivi comptable</p>
         </div>
       </div>
 
-      <div className="p-6 md:p-10">
+      <div className="p-4 sm:p-6 md:p-10">
         <div className="max-w-7xl mx-auto space-y-6">
           {/* Stats cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-sm">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-xl flex items-center justify-center">
                   <Wallet size={20} className="text-white" />
                 </div>
                 <span className="text-sm font-semibold text-slate-600">Solde Net</span>
               </div>
-              <p className={`text-3xl font-bold ${totals.balance >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+              <p className={`text-2xl sm:text-3xl font-bold break-all ${totals.balance >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                 {totals.balance.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} DA
               </p>
               <p className="text-xs text-slate-500 mt-2">
@@ -667,14 +667,14 @@ export const TransactionList: React.FC = () => {
               </p>
             </div>
 
-            <div className="bg-white border border-emerald-200 rounded-2xl p-6 shadow-sm">
+            <div className="bg-white border border-emerald-200 rounded-2xl p-5 sm:p-6 shadow-sm">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center">
                   <ArrowUpCircle size={20} className="text-emerald-600" />
                 </div>
                 <span className="text-sm font-semibold text-emerald-900">Encaissements</span>
               </div>
-              <p className="text-3xl font-bold text-emerald-600">
+              <p className="text-2xl sm:text-3xl font-bold text-emerald-600 break-all">
                 +{totals.income.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} DA
               </p>
               <p className="text-xs text-emerald-700 mt-2">
@@ -682,14 +682,14 @@ export const TransactionList: React.FC = () => {
               </p>
             </div>
 
-            <div className="bg-white border border-rose-200 rounded-2xl p-6 shadow-sm">
+            <div className="bg-white border border-rose-200 rounded-2xl p-5 sm:p-6 shadow-sm">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-10 h-10 bg-rose-100 rounded-xl flex items-center justify-center">
                   <ArrowDownCircle size={20} className="text-rose-600" />
                 </div>
                 <span className="text-sm font-semibold text-rose-900">Décaissements</span>
               </div>
-              <p className="text-3xl font-bold text-rose-600">
+              <p className="text-2xl sm:text-3xl font-bold text-rose-600 break-all">
                 -{totals.expense.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} DA
               </p>
               <p className="text-xs text-rose-700 mt-2">
@@ -697,14 +697,14 @@ export const TransactionList: React.FC = () => {
               </p>
             </div>
 
-            <div className="bg-white border border-indigo-200 rounded-2xl p-6 shadow-sm">
+            <div className="bg-white border border-indigo-200 rounded-2xl p-5 sm:p-6 shadow-sm">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center">
                   <ShoppingBag size={20} className="text-indigo-600" />
                 </div>
                 <span className="text-sm font-semibold text-indigo-900">Versements Commandes</span>
               </div>
-              <p className="text-3xl font-bold text-indigo-600">
+              <p className="text-2xl sm:text-3xl font-bold text-indigo-600 break-all">
                 +{orderAdvanceTotal.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} DA
               </p>
               <p className="text-xs text-indigo-700 mt-2">
@@ -714,7 +714,7 @@ export const TransactionList: React.FC = () => {
           </div>
 
           {/* Actions & search */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
               <input
@@ -726,10 +726,10 @@ export const TransactionList: React.FC = () => {
               />
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                className={`flex items-center gap-2 px-4 py-2.5 min-h-[44px] rounded-xl text-sm font-semibold transition-all ${
                   showFilters ? 'bg-indigo-600 text-white shadow-md' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
                 }`}
               >
@@ -742,32 +742,32 @@ export const TransactionList: React.FC = () => {
               </button>
 
               {activeFiltersCount > 0 && (
-                <button onClick={resetFilters} className="p-2.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all border border-slate-200" title="Réinitialiser les filtres">
+                <button onClick={resetFilters} className="p-2.5 min-h-[44px] text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all border border-slate-200" title="Réinitialiser les filtres">
                   <RotateCcw size={18} />
                 </button>
               )}
             </div>
 
-            <div className="flex items-center gap-2">
-              <button onClick={exportToCSV} className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-all">
+            <div className="flex flex-wrap items-center gap-2">
+              <button onClick={exportToCSV} className="flex items-center gap-2 px-4 py-2.5 min-h-[44px] bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-all" title="Exporter Excel" aria-label="Exporter Excel">
                 <Download size={16} />
-                Excel
+                <span className="hidden sm:inline">Excel</span>
               </button>
-              <button onClick={exportToPDF} className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-all">
+              <button onClick={exportToPDF} className="flex items-center gap-2 px-4 py-2.5 min-h-[44px] bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-all" title="Exporter PDF" aria-label="Exporter PDF">
                 <FileText size={16} />
-                PDF
+                <span className="hidden sm:inline">PDF</span>
               </button>
-              <button onClick={() => setIsModalOpen(true)} className="flex items-center gap-2 px-5 py-2.5 bg-[#6366F1] text-white rounded-lg text-sm font-semibold hover:bg-[#5558E3] transition-all shadow-md hover:shadow-lg whitespace-nowrap">
+              <button onClick={() => setIsModalOpen(true)} className="flex items-center gap-2 px-5 py-2.5 min-h-[44px] bg-[#6366F1] text-white rounded-lg text-sm font-semibold hover:bg-[#5558E3] transition-all shadow-md hover:shadow-lg whitespace-nowrap" title="Nouvelle transaction" aria-label="Nouvelle transaction">
                 <Plus size={18} />
-                Nouvelle Transaction
+                <span className="hidden sm:inline">Nouvelle Transaction</span>
               </button>
             </div>
           </div>
 
           {/* Filters panel */}
           {showFilters && (
-            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 shadow-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Origine</label>
                   <select value={filterSource} onChange={(e) => setFilterSource(e.target.value as any)} className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm">
@@ -806,7 +806,7 @@ export const TransactionList: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Méthode</label>
                   <select value={filterPaymentMethod} onChange={(e) => setFilterPaymentMethod(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm">
@@ -842,7 +842,136 @@ export const TransactionList: React.FC = () => {
             </div>
           ) : (
             <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-              <div className="overflow-x-auto">
+              {/* Mobile cards */}
+              <div className="md:hidden divide-y divide-slate-100">
+                {filteredRows.length === 0 ? (
+                  <div className="px-6 py-12 text-center">
+                    <Wallet size={32} className="text-slate-300 mx-auto mb-3" />
+                    <p className="text-slate-500 font-semibold">Aucun résultat trouvé</p>
+                    <p className="text-slate-400 text-sm mt-1">Essayez un autre terme de recherche</p>
+                  </div>
+                ) : filteredRows.map((row) => {
+                    if (row.kind === 'ORDER') {
+                      const o = row.data as Order;
+                      const client: any = (clients || []).find(c => c.id === o.clientId);
+                      const orderDate = new Date((o.orderDate ?? o.createdAt ?? new Date().toISOString()));
+                      return (
+                        <div key={`order-card-${o.id}`} className="p-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="text-xs uppercase tracking-widest text-slate-400 font-bold">Commande</p>
+                              <p className="text-base font-semibold text-slate-900 break-all">
+                                CMD-{String(o.id).slice(0,8).toUpperCase()}
+                              </p>
+                              <div className="mt-1 flex items-center gap-2 text-xs text-slate-500">
+                                <Calendar size={14} className="text-slate-400" />
+                                {orderDate.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm font-semibold text-slate-900 break-all">
+                                {Number(o.totalPrice ?? 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} DA
+                              </p>
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 mt-2 bg-indigo-100 text-indigo-700 text-xs font-medium rounded-lg border border-indigo-200">
+                                <ShoppingBag size={14} />
+                                Commande
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="mt-3 flex items-center justify-between gap-3">
+                            {client ? (
+                              <Link to={`/clients/${o.clientId}/history`} className="flex items-center gap-1.5 text-indigo-600 hover:text-indigo-800 text-sm font-medium group">
+                                <User size={14} />
+                                <span className="truncate">{client.name}</span>
+                                <ExternalLink size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                              </Link>
+                            ) : (
+                              <span className="text-sm text-slate-500 flex items-center gap-1.5">
+                                <User size={14} />
+                                Inconnu
+                              </span>
+                            )}
+                            <button onClick={() => openOrderDetails(String(o.id))} className="px-3 py-2 min-h-[44px] text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 transition-all font-semibold" title="Détails commande" aria-label="Détails commande">
+                              <FileText size={16} />
+                              <span className="hidden sm:inline">Détails</span>
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    const t = row.data as Transaction;
+                    const tiers = getTiersInfo(t);
+                    return (
+                      <div key={`transaction-card-${t.id}`} className="p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-xs uppercase tracking-widest text-slate-400 font-bold">Transaction</p>
+                            <p className="text-sm font-semibold text-slate-900 break-words">{t.description ?? '-'}</p>
+                            {t.notes && <p className="text-xs text-slate-500 mt-1 break-words">{t.notes}</p>}
+                            <div className="mt-2 flex items-center gap-2 text-xs text-slate-500">
+                              <Calendar size={14} className="text-slate-400" />
+                              {new Date(safeDateIso(t.date)).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className={`text-sm font-semibold break-all ${t.type === TransactionType.INCOME ? 'text-emerald-600' : 'text-rose-600'}`}>
+                              {t.type === TransactionType.INCOME ? '+' : '-'}{Number(t.amount ?? 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} DA
+                            </p>
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 mt-2 text-xs font-medium rounded-lg border ${
+                              t.type === TransactionType.INCOME ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-rose-100 text-rose-700 border-rose-200'
+                            }`}>
+                              {t.type === TransactionType.INCOME ? <ArrowUpCircle size={14} /> : <ArrowDownCircle size={14} />}
+                              {t.type === TransactionType.INCOME ? 'Entrée' : 'Sortie'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="mt-3 flex items-center justify-between gap-3">
+                          {tiers.path ? (
+                            <Link to={tiers.path} className="flex items-center gap-1.5 text-indigo-600 hover:text-indigo-800 text-sm font-medium group">
+                              {tiers.icon}
+                              <span className="truncate">{tiers.label}</span>
+                              <ExternalLink size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </Link>
+                          ) : (
+                            <span className="text-sm text-slate-500 flex items-center gap-1.5">
+                              {tiers.icon}
+                              {tiers.label}
+                            </span>
+                          )}
+                          <div className="flex gap-2">
+                            {t.order_id && (
+                              <button onClick={() => openOrderDetails(String(t.order_id))} className="px-3 py-2 min-h-[44px] text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 transition-all font-semibold" title="Voir commande" aria-label="Voir commande">
+                                <ShoppingBag size={16} />
+                                <span className="hidden sm:inline">Commande</span>
+                              </button>
+                            )}
+                            <button onClick={() => handleOpenEdit(t)} className="px-3 py-2 min-h-[44px] text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-lg border border-amber-200 transition-all font-semibold" title="Modifier" aria-label="Modifier">
+                              <Edit3 size={16} />
+                              <span className="hidden sm:inline">Modifier</span>
+                            </button>
+                            <button onClick={() => { setTransactionToDelete(t); setIsDeleteModalOpen(true); }} className="px-3 py-2 min-h-[44px] text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg border border-rose-200 transition-all font-semibold" title="Supprimer" aria-label="Supprimer">
+                              <Trash2 size={16} />
+                              <span className="hidden sm:inline">Supprimer</span>
+                            </button>
+                          </div>
+                        </div>
+
+                        {t.reference && (
+                          <div className="mt-3 flex items-center gap-2 text-xs text-slate-500">
+                            <Receipt size={14} className="text-slate-400" />
+                            <span className="font-mono text-slate-600 bg-slate-100 px-2 py-1 rounded break-all">{t.reference}</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+              </div>
+
+              {/* Desktop table */}
+              <div className="hidden md:block overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-slate-50 border-b border-slate-200">
                     <tr>
@@ -914,12 +1043,12 @@ export const TransactionList: React.FC = () => {
                               )}
                             </td>
 
-                            <td className="px-6 py-4">
-                              <div className="flex items-center gap-1.5">
-                                <Receipt size={14} className="text-slate-400" />
-                                <span className="text-xs font-mono text-slate-600 bg-slate-100 px-2 py-1 rounded">{String(o.id).slice(0,8).toUpperCase()}</span>
-                              </div>
-                            </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-1.5">
+                              <Receipt size={14} className="text-slate-400" />
+                              <span className="text-xs font-mono text-slate-600 bg-slate-100 px-2 py-1 rounded break-all">{String(o.id).slice(0,8).toUpperCase()}</span>
+                            </div>
+                          </td>
 
                             <td className="px-6 py-4 text-right">
                               <p className="text-sm font-semibold text-slate-900">
@@ -995,7 +1124,7 @@ export const TransactionList: React.FC = () => {
                             {t.reference ? (
                               <div className="flex items-center gap-1.5">
                                 <Receipt size={14} className="text-slate-400" />
-                                <span className="text-xs font-mono text-slate-600 bg-slate-100 px-2 py-1 rounded">{t.reference}</span>
+                                <span className="text-xs font-mono text-slate-600 bg-slate-100 px-2 py-1 rounded break-all">{t.reference}</span>
                               </div>
                             ) : <span className="text-xs text-slate-400">-</span>}
                           </td>
@@ -1084,35 +1213,71 @@ export const TransactionList: React.FC = () => {
                   </div>
 
                   <div className="border border-slate-100 rounded-xl overflow-hidden">
-                    <table className="w-full text-sm">
-                      <thead className="bg-slate-50 border-b border-slate-100">
-                        <tr>
-                          <th className="px-4 py-3 text-left font-semibold text-slate-600">Article</th>
-                          <th className="px-4 py-3 text-center font-semibold text-slate-600">Quantité</th>
-                          <th className="px-4 py-3 text-right font-semibold text-slate-600">Prix Unitaire</th>
-                          <th className="px-4 py-3 text-right font-semibold text-slate-600">Total</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-50">
-                        {selectedOrder.items?.map((item, idx) => {
-                          const product = (products || []).find((p: any) => p.id === item.productId) || (materials || []).find((m: any) => m.id === item.productId);
-                          return (
-                            <tr key={idx}>
-                              <td className="px-4 py-3 font-medium text-slate-800">{product?.name || 'Produit inconnu'}</td>
-                              <td className="px-4 py-3 text-center text-slate-600">{item.quantity} {item.unit}</td>
-                              <td className="px-4 py-3 text-right text-slate-600">{(item.unitPrice ?? 0).toLocaleString()} DA</td>
-                              <td className="px-4 py-3 text-right font-bold text-slate-900">{(item.totalItemPrice ?? 0).toLocaleString()} DA</td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                      <tfoot className="bg-slate-50/50 font-bold">
-                        <tr>
-                          <td colSpan={3} className="px-4 py-3 text-right text-slate-600">Total Commande</td>
-                          <td className="px-4 py-3 text-right text-indigo-600 text-lg">{(selectedOrder.totalPrice ?? 0).toLocaleString()} DA</td>
-                        </tr>
-                      </tfoot>
-                    </table>
+                    {/* Mobile cards */}
+                    <div className="md:hidden divide-y divide-slate-50">
+                      {selectedOrder.items?.map((item, idx) => {
+                        const product = (products || []).find((p: any) => p.id === item.productId) || (materials || []).find((m: any) => m.id === item.productId);
+                        return (
+                          <div key={idx} className="p-4">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="text-xs uppercase tracking-widest text-slate-400 font-bold">Article</p>
+                                <p className="text-sm font-semibold text-slate-900 break-words">{product?.name || 'Produit inconnu'}</p>
+                                <div className="mt-2 flex items-center gap-2 text-xs text-slate-500">
+                                  <Package size={14} className="text-slate-400" />
+                                  {item.quantity} {item.unit}
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-xs text-slate-500">PU</p>
+                                <p className="text-sm font-semibold text-slate-700 break-all">{(item.unitPrice ?? 0).toLocaleString()} DA</p>
+                                <p className="text-xs text-slate-500 mt-2">Total</p>
+                                <p className="text-sm font-bold text-slate-900 break-all">{(item.totalItemPrice ?? 0).toLocaleString()} DA</p>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      <div className="p-4 bg-slate-50/50">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-semibold text-slate-600 uppercase">Total Commande</span>
+                          <span className="text-base font-bold text-indigo-600 break-all">{(selectedOrder.totalPrice ?? 0).toLocaleString()} DA</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Desktop table */}
+                    <div className="hidden md:block">
+                      <table className="w-full text-sm">
+                        <thead className="bg-slate-50 border-b border-slate-100">
+                          <tr>
+                            <th className="px-4 py-3 text-left font-semibold text-slate-600">Article</th>
+                            <th className="px-4 py-3 text-center font-semibold text-slate-600">Quantité</th>
+                            <th className="px-4 py-3 text-right font-semibold text-slate-600">Prix Unitaire</th>
+                            <th className="px-4 py-3 text-right font-semibold text-slate-600">Total</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50">
+                          {selectedOrder.items?.map((item, idx) => {
+                            const product = (products || []).find((p: any) => p.id === item.productId) || (materials || []).find((m: any) => m.id === item.productId);
+                            return (
+                              <tr key={idx}>
+                                <td className="px-4 py-3 font-medium text-slate-800">{product?.name || 'Produit inconnu'}</td>
+                                <td className="px-4 py-3 text-center text-slate-600">{item.quantity} {item.unit}</td>
+                                <td className="px-4 py-3 text-right text-slate-600 break-all">{(item.unitPrice ?? 0).toLocaleString()} DA</td>
+                                <td className="px-4 py-3 text-right font-bold text-slate-900 break-all">{(item.totalItemPrice ?? 0).toLocaleString()} DA</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                        <tfoot className="bg-slate-50/50 font-bold">
+                          <tr>
+                            <td colSpan={3} className="px-4 py-3 text-right text-slate-600">Total Commande</td>
+                            <td className="px-4 py-3 text-right text-indigo-600 text-lg break-all">{(selectedOrder.totalPrice ?? 0).toLocaleString()} DA</td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
                   </div>
 
                   {/* Consommation matières premières */}
@@ -1128,6 +1293,45 @@ export const TransactionList: React.FC = () => {
                       </div>
                       <div className="border border-slate-100 rounded-xl overflow-hidden">
                         {materialRequirements.length > 0 ? (
+                          <>
+                          {/* Mobile cards */}
+                          <div className="md:hidden divide-y divide-slate-50">
+                            {materialRequirements.map((m: any) => {
+                              const isLow = Number(m.stock ?? 0) < Number(m.requiredQty ?? 0);
+                              return (
+                                <div key={m.materialId} className="p-4">
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div className="min-w-0">
+                                      <p className="text-xs uppercase tracking-widest text-slate-400 font-bold">Matière</p>
+                                      <p className="text-sm font-semibold text-slate-900 break-words">{m.name}</p>
+                                      <div className="mt-2 flex items-center gap-2 text-xs text-slate-500">
+                                        <Package size={14} className="text-slate-400" />
+                                        {Number(m.requiredQty ?? 0).toLocaleString()} {m.unit} requis
+                                      </div>
+                                    </div>
+                                    <div className="text-right">
+                                      <p className={`text-sm font-semibold ${isLow ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                        {Number(m.stock ?? 0).toLocaleString()} {m.unit}
+                                      </p>
+                                      <p className="text-xs text-slate-500 mt-2">PU</p>
+                                      <p className="text-sm font-semibold text-slate-700 break-all">{Number(m.unitPrice ?? 0).toLocaleString()} DA</p>
+                                      <p className="text-xs text-slate-500 mt-2">Coût</p>
+                                      <p className="text-sm font-bold text-slate-900 break-all">{Number(m.totalCost ?? 0).toLocaleString()} DA</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                            <div className="p-4 bg-slate-50/50">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-semibold text-slate-600 uppercase">Coût matières</span>
+                                <span className="text-base font-bold text-indigo-600 break-all">{totalMaterialCost.toLocaleString()} DA</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Desktop table */}
+                          <div className="hidden md:block">
                           <table className="w-full text-sm">
                             <thead className="bg-slate-50 border-b border-slate-100">
                               <tr>
@@ -1148,8 +1352,8 @@ export const TransactionList: React.FC = () => {
                                     <td className={`px-4 py-3 text-center font-semibold ${isLow ? 'text-rose-600' : 'text-emerald-600'}`}>
                                       {Number(m.stock ?? 0).toLocaleString()} {m.unit}
                                     </td>
-                                    <td className="px-4 py-3 text-right text-slate-600">{Number(m.unitPrice ?? 0).toLocaleString()} DA</td>
-                                    <td className="px-4 py-3 text-right font-bold text-slate-900">{Number(m.totalCost ?? 0).toLocaleString()} DA</td>
+                                    <td className="px-4 py-3 text-right text-slate-600 break-all">{Number(m.unitPrice ?? 0).toLocaleString()} DA</td>
+                                    <td className="px-4 py-3 text-right font-bold text-slate-900 break-all">{Number(m.totalCost ?? 0).toLocaleString()} DA</td>
                                   </tr>
                                 );
                               })}
@@ -1157,10 +1361,12 @@ export const TransactionList: React.FC = () => {
                             <tfoot className="bg-slate-50/50 font-bold">
                               <tr>
                                 <td colSpan={4} className="px-4 py-3 text-right text-slate-600">Coût matières</td>
-                                <td className="px-4 py-3 text-right text-indigo-600 text-lg">{totalMaterialCost.toLocaleString()} DA</td>
+                                <td className="px-4 py-3 text-right text-indigo-600 text-lg break-all">{totalMaterialCost.toLocaleString()} DA</td>
                               </tr>
                             </tfoot>
                           </table>
+                          </div>
+                          </>
                         ) : (
                           <div className="px-4 py-6 text-center text-sm text-slate-400">Aucune formule matière associée aux produits.</div>
                         )}
@@ -1246,10 +1452,14 @@ export const TransactionList: React.FC = () => {
               </div>
 
               <div className="flex gap-3 pt-4">
-                <button type="button" onClick={handleCloseModal} className="flex-1 px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl text-sm font-semibold hover:bg-slate-200 transition-all">Annuler</button>
-                <button type="submit" disabled={saveMutation.isLoading || !formData.category} className="flex-1 px-4 py-2.5 bg-[#6366F1] text-white rounded-xl text-sm font-semibold hover:bg-[#5558E3] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-                  {saveMutation.isLoading ? 'Enregistrement...' : (editingTransaction ? 'Mettre à jour' : 'Enregistrer')}
-                </button>
+              <button type="button" onClick={handleCloseModal} className="flex-1 px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl text-sm font-semibold hover:bg-slate-200 transition-all" title="Annuler" aria-label="Annuler">
+                <X size={18} />
+                <span className="hidden sm:inline">Annuler</span>
+              </button>
+              <button type="submit" disabled={saveMutation.isLoading || !formData.category} className="flex-1 px-4 py-2.5 bg-[#6366F1] text-white rounded-xl text-sm font-semibold hover:bg-[#5558E3] transition-all disabled:opacity-50 disabled:cursor-not-allowed" title={saveMutation.isLoading ? 'Enregistrement...' : (editingTransaction ? 'Mettre à jour' : 'Enregistrer')} aria-label={saveMutation.isLoading ? 'Enregistrement' : (editingTransaction ? 'Mettre à jour' : 'Enregistrer')}>
+                {saveMutation.isLoading ? <Clock size={18} /> : editingTransaction ? <Edit3 size={18} /> : <Plus size={18} />}
+                <span className="hidden sm:inline">{saveMutation.isLoading ? 'Enregistrement...' : (editingTransaction ? 'Mettre à jour' : 'Enregistrer')}</span>
+              </button>
               </div>
             </form>
           </div>
@@ -1275,9 +1485,13 @@ export const TransactionList: React.FC = () => {
               </div>
             </div>
             <div className="flex gap-3">
-              <button onClick={() => { setIsDeleteModalOpen(false); setTransactionToDelete(null); }} className="flex-1 px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl text-sm font-semibold hover:bg-slate-200 transition-all">Annuler</button>
-              <button onClick={() => deleteMutation.mutate(transactionToDelete.id)} disabled={deleteMutation.isLoading} className="flex-1 px-4 py-2.5 bg-rose-600 text-white rounded-xl text-sm font-semibold hover:bg-rose-700 transition-all disabled:opacity-50">
-                {deleteMutation.isLoading ? 'Suppression...' : 'Supprimer'}
+              <button onClick={() => { setIsDeleteModalOpen(false); setTransactionToDelete(null); }} className="flex-1 px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl text-sm font-semibold hover:bg-slate-200 transition-all" title="Annuler" aria-label="Annuler">
+                <X size={18} />
+                <span className="hidden sm:inline">Annuler</span>
+              </button>
+              <button onClick={() => deleteMutation.mutate(transactionToDelete.id)} disabled={deleteMutation.isLoading} className="flex-1 px-4 py-2.5 bg-rose-600 text-white rounded-xl text-sm font-semibold hover:bg-rose-700 transition-all disabled:opacity-50" title={deleteMutation.isLoading ? 'Suppression...' : 'Supprimer'} aria-label={deleteMutation.isLoading ? 'Suppression' : 'Supprimer'}>
+                {deleteMutation.isLoading ? <Clock size={18} /> : <Trash2 size={18} />}
+                <span className="hidden sm:inline">{deleteMutation.isLoading ? 'Suppression...' : 'Supprimer'}</span>
               </button>
             </div>
           </div>
